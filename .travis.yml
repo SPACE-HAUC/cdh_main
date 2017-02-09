@@ -12,3 +12,5 @@ compiler:
 script:
   - cd build
   - cmake .. && make
+  - cd .. && git clone "https://github.com/SpaceHAUC-Command-and-Data-Handling/Powerlint.git" && export PATH=$PATH:. && mv ./Powerlint/* ./
+  - wget "https://raw.githubusercontent.com/SpaceHAUC-Command-and-Data-Handling/git_hooks/master/hooks/check-style" && chmod +x ./check-style && ./check-style
