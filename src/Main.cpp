@@ -27,7 +27,7 @@ void setup() {
  * command priority. 
  */
 void loop() {
-  while(true) {
+  while (true) {
     // TODO(Team Req): Give functionality
   }
 }
