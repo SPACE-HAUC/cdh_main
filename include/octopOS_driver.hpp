@@ -5,8 +5,12 @@
 #include <string>
 #include <stdexcept>
 #include <utility>
+#include <ctime>
 
-const std::string CONFIG_PATH = "/etc/octopOS/config.json";
+const char* CONFIG_PATH = "/etc/octopOS/config.json";
+const char* REBOOT_TOPIC = "module_reboot";
+const time_t RUNTIME_CUTOFF_DOWNGRADE_S = 60;
+const bool LISTEN_FOR_MODULE_REBOOTS = true;
 
 using json = nlohmann::json;
 
@@ -14,9 +18,11 @@ typedef const long MemKey;
 struct Module {
     pid_t pid;
     MemKey msgkey;
-    tentacle& tentacle;
-    Module(pid_t _pid, MemKey _msgkey, tentacle& _tentacle):
-	pid(_pid), msgkey(_msgkey), tentacle(_tentacle) { }
+    bool killed;
+    time_t launch_time;
+    Module(pid_t _pid, MemKey _msgkey, time_t _launch_time):
+	pid(_pid), msgkey(_msgkey), launch_time(_launch_time),
+	killed(false) { }
 };
 typedef std::map<std::string, Module> ModuleInfo;
 typedef std::pair<ModuleInfo, MemKey> LaunchInfo;

@@ -53,7 +53,7 @@ ModuleInfo launch_modules_in(FilePath dir, MemKey start_key) {
     pid_t pid;
     for (FilePath module : modules_in(dir)) {
 	pid_t pid = launch(module, current_key);
-	modules[module] = Module(pid, current_key);
+	modules[module] = Module(pid, current_key, time(0));
 	current_key++;
     }
     return modules;
