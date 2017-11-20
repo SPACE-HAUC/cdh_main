@@ -10,14 +10,16 @@
 #include <iostream>
 #include <cstdlib>
 #include <cstring> // for memset
+#include <sys/types.h>
+#include <sys/wait.h>
 
 #include <octopOS/publisher.h>
 
-const char* CONFIG_PATH = "/etc/octopOS/config.json";
-const char* UPGRADE_TOPIC = "module_upgrade";
-const char* DOWNGRADE_TOPIC = "module_downgrade";
-const time_t RUNTIME_CUTOFF_DOWNGRADE_S = 60;
-const bool LISTEN_FOR_MODULE_UPGRADES = true;
+extern const char* CONFIG_PATH;
+extern const char* UPGRADE_TOPIC;
+extern const char* DOWNGRADE_TOPIC;
+extern const time_t RUNTIME_CUTOFF_DOWNGRADE_S;
+extern const bool LISTEN_FOR_MODULE_UPGRADES;
 
 typedef long MemKey;
 struct Module {
@@ -63,14 +65,18 @@ private:
 };
 
 
+bool accessible(FilePath file);
 Optional<json> load(FilePath json_file);
 pid_t launch(FilePath module, MemKey key);
 LaunchInfo launch_modules_in(FilePath dir, MemKey start_key);
+std::list<FilePath> modules_in(FilePath dir);
+Optional< std::list<FilePath> > files_in(FilePath dir);
 bool launch_listeners();
-Optional<std::string> find_module_with(pid_t pid, ModuleInfo &modules);
+Optional<std::string> find_module_with(pid_t pid, const ModuleInfo &modules);
 void reboot_module(std::string path, ModuleInfo *modules,
 		   publisher<std::string> &downgrade_pub);
 void kill_module(std::string path, ModuleInfo *modules);
+bool module_needs_downgrade(Module module);
 
 
 class ChildHandler {

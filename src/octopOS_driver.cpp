@@ -24,9 +24,12 @@
 
 #include "../include/octopOS_driver.hpp"
 
-bool accessible(FilePath file);
-std::list<FilePath> modules_in(FilePath dir);
-Optional< std::list<FilePath> > files_in(FilePath dir);
+
+const char* CONFIG_PATH = "/etc/octopOS/config.json";
+const char* UPGRADE_TOPIC = "module_upgrade";
+const char* DOWNGRADE_TOPIC = "module_downgrade";
+const time_t RUNTIME_CUTOFF_DOWNGRADE_S = 60;
+const bool LISTEN_FOR_MODULE_UPGRADES = true;
 
 
 Optional<json> load(FilePath json_file) {
@@ -91,6 +94,9 @@ std::list<FilePath> modules_in(FilePath dir) {
     return files.getDefault(std::list<FilePath>());
 }
 
+// Returns a list of *complete* (relative or absolute) paths to the
+// files in DIRECTORY if directory is accessible.
+// Otherwise returns None.
 Optional< std::list<FilePath> > files_in(FilePath directory) {
     DIR *dir;
     struct dirent *ent;
@@ -151,7 +157,7 @@ void reboot_module(std::string path, ModuleInfo *modules,
     }
 }
 
-Optional<std::string> find_module_with(pid_t pid, ModuleInfo &modules) {
+Optional<std::string> find_module_with(pid_t pid, const ModuleInfo &modules) {
     auto moduleIt = std::find_if(modules.begin(), modules.end(),
 				 [&](const std::pair<std::string, Module> el) {
 				     return el.second.pid == pid;
