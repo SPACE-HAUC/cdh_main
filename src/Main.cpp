@@ -12,8 +12,10 @@
 #include <pthread.h>
 
 #include <octopOS/octopos.h>
-#include "../include/octopOS_driver.hpp"
 #include <octopOS/subscriber.h>
+#include <octopOS/publisher.h>
+
+#include "../include/octopOS_driver.hpp"
 
 int main(int argc, char const *argv[]) {
     octopOS &octopos = octopOS::getInstance();
@@ -28,6 +30,7 @@ int main(int argc, char const *argv[]) {
     }
     json config = maybe_config.get();
 
+
     LaunchInfo launched = launch_modules_in(config["modules_enabled"],
 					    current_key);
     current_key = launched.second;
@@ -39,7 +42,9 @@ int main(int argc, char const *argv[]) {
 	return -1;
     }
 
-    ChildHandler::register_child_death_handler(&modules);
+
+    publisher<std::string> downgrade_pub(DOWNGRADE_TOPIC, current_key++);
+    ChildHandler::register_child_handler(&modules, &downgrade_pub);
 
     auto upgrade_module = modules[UPGRADE_TOPIC];
     subscriber<std::string> upgrade_sub(UPGRADE_TOPIC, upgrade_module.msgkey);

@@ -21,6 +21,7 @@
 
 #include <octopOS/octopos.h>
 #include <octopOS/subscriber.h>
+
 #include "../include/octopOS_driver.hpp"
 
 bool accessible(FilePath file);
@@ -127,14 +128,12 @@ bool module_needs_downgrade(Module module) {
     return (time(0) - module.launch_time) < RUNTIME_CUTOFF_DOWNGRADE_S;
 }
 
-void downgrade(FilePath module_name) {
-    // TODO(llazarek): Should this be done here, or should the
-    // procedure for downgrading be handled by the upgrade module? It
-    // seems to make more sense in the upgrade module; here, we could
-    // publish a request to downgrade the module.
+void downgrade(FilePath module_name, publisher<std::string> &downgrade_pub) {
+    downgrade_pub.publish(module_name);
 }
 
-void reboot_module(std::string path, ModuleInfo *modules) {
+void reboot_module(std::string path, ModuleInfo *modules,
+		   publisher<std::string> &downgrade_pub) {
     Module &module = (*modules)[path];
     if (module.killed) {
 	// Death was intentional, just reboot
@@ -144,7 +143,7 @@ void reboot_module(std::string path, ModuleInfo *modules) {
     } else {
 	// Something else happened
 	if (module_needs_downgrade(module)) {
-	    downgrade(path);
+	  downgrade(path, downgrade_pub);
 	} else {
 	    module.pid = launch(path, module.msgkey);
 	    module.launch_time = time(0);
