@@ -16,10 +16,11 @@
 #include <sys/wait.h>
 #include <pthread.h>
 #include <dirent.h>
+#include <list>
+#include <fstream>
 
 #include <octopOS/octopos.h>
-#include <octopOS/tentacle.h>
-
+#include <octopOS/subscriber.h>
 #include "../include/octopOS_driver.hpp"
 
 bool accessible(FilePath file);
@@ -28,12 +29,10 @@ Optional< std::list<FilePath> > files_in(FilePath dir);
 
 
 Optional<json> load(FilePath json_file) {
-    Optional<json> out = Optional::None();
+    Optional<json> out = Optional<json>::None();
     if (accessible(json_file)) {
-	json j;
 	std::ifstream in(json_file);
-	in >> j;
-	out = Optional::Just(j);
+	out = Optional<json>::Just(json::parse(in));
     }
     return out;
 }
@@ -42,21 +41,21 @@ Optional<json> load(FilePath json_file) {
 pid_t launch(FilePath module, MemKey key) {
     pid_t pid;
     if (!(pid = fork())) { // child
-	execl(module, std::to_string(key).c_str(), (char*)0);
+        execl(module.c_str(), std::to_string(key).c_str(), (char*)0);
     }
     return pid;
 }
 
-ModuleInfo launch_modules_in(FilePath dir, MemKey start_key) {
+LaunchInfo launch_modules_in(FilePath dir, MemKey start_key) {
     ModuleInfo modules;
-    long current_key = start_key;
+    MemKey current_key = start_key;
     pid_t pid;
     for (FilePath module : modules_in(dir)) {
 	pid_t pid = launch(module, current_key);
 	modules[module] = Module(pid, current_key, time(0));
 	current_key++;
     }
-    return modules;
+    return std::make_pair(modules, current_key);
 }
 
 bool launch_listeners() {
@@ -91,19 +90,19 @@ std::list<FilePath> modules_in(FilePath dir) {
     return files.getDefault(std::list<FilePath>());
 }
 
-Optional< std::list<FilePath> > files_in(FilePath dir) {
-    DIR *dir;
+Optional< std::list<FilePath> > files_in(FilePath directory) {
     DIR *dir;
     struct dirent *ent;
-    Optional< std::list<FilePath> > list = Optional::None();
+    Optional< std::list<FilePath> > list =
+      Optional< std::list<FilePath> >::None();
 
-    dir = opendir("./");
+    dir = opendir(directory.c_str());
     if (dir != NULL){
 	std::list<FilePath> files;
-	while (epdf = readdir(dir)){
-	    files.push(ent->d_name);
+	while (ent = readdir(dir)){
+	    files.push_front(ent->d_name);
 	}
-	list = Optional::Just(files);
+	list = Optional< std::list<FilePath> >::Just(files);
     }
     closedir(dir);
     return list;
@@ -114,7 +113,7 @@ Optional< std::list<FilePath> > files_in(FilePath dir) {
 // -a-file-exist-using-standard-c-c11-c
 bool accessible(FilePath file) {
     struct stat buffer;
-    return (stat (name.c_str(), &buffer) == 0);
+    return (stat (file.c_str(), &buffer) == 0);
 }
 
 void kill_module(std::string path, ModuleInfo *modules) {
@@ -123,9 +122,16 @@ void kill_module(std::string path, ModuleInfo *modules) {
     kill(module.pid, SIGTERM);
 }
 
-bool module_needs_downgrade(ModuleInfo module) {
+bool module_needs_downgrade(Module module) {
     // TODO(llazarek): Is this a sufficient heuristic?
     return (time(0) - module.launch_time) < RUNTIME_CUTOFF_DOWNGRADE_S;
+}
+
+void downgrade(FilePath module_name) {
+    // TODO(llazarek): Should this be done here, or should the
+    // procedure for downgrading be handled by the upgrade module? It
+    // seems to make more sense in the upgrade module; here, we could
+    // publish a request to downgrade the module.
 }
 
 void reboot_module(std::string path, ModuleInfo *modules) {
@@ -148,49 +154,12 @@ void reboot_module(std::string path, ModuleInfo *modules) {
 
 Optional<std::string> find_module_with(pid_t pid, ModuleInfo &modules) {
     auto moduleIt = std::find_if(modules.begin(), modules.end(),
-				 [](const Module &module) {module.pid == pid});
+				 [&](const std::pair<std::string, Module> el) {
+				     return el.second.pid == pid;
+				 });
     if (moduleIt == modules.end()) {
-	return Optional::None();
+	return Optional<std::string>::None();
     } else {
-	return Optional::Just(moduleIt -> first);
+	return Optional<std::string>::Just(moduleIt -> first);
     }
 }
-
-class ChildHandler {
-    static void sigchld_handler(int sig)
-    {
-	pid_t p;
-	int status;
-	int x = 0;
-	pthread_t tmp;
-
-	while ((pid = waitpid(-1, &status, WNOHANG)) != -1) {
-	    // handle all dead children in new threads
-	    pthread_create(&tmp, NULL, handle_dead_module, &x);
-	}
-    }
-
-    static void handle_dead_module(pid_t pid) {
-	Optional<std::string> found = find_module_with(pid, modules);
-	if (found.isEmpty()) {
-	    std::cerr << "Notification of unregistered module death. "
-		      << "Something has probably gone horribly wrong."
-		      << std::endl;
-	} else {
-	    reboot_module(found.get(), &modules);
-	}
-    }
-
-    static void register_child_death_handler(ModuleInfo *_modules) {
-	modules = *_modules;
-	struct sigaction sa;
-
-	memset(&sa, 0, sizeof(sa));
-	sa.sa_handler = sigchld_handler;
-
-	sigaction(SIGCHLD, &sa, NULL);
-    }
-
-private:
-    static ModuleInfo &modules;
-};

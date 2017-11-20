@@ -13,9 +13,10 @@
 
 #include <octopOS/octopos.h>
 #include "../include/octopOS_driver.hpp"
+#include <octopOS/subscriber.h>
 
 int main(int argc, char const *argv[]) {
-    octopOS::octopOS octopos = octopOS::getInstance();
+    octopOS &octopos = octopOS::getInstance();
     MemKey current_key = MSGKEY;
 
     Optional<json> maybe_config = load(CONFIG_PATH);
@@ -40,11 +41,11 @@ int main(int argc, char const *argv[]) {
 
     ChildHandler::register_child_death_handler(&modules);
 
-    reboot_module = modules[REBOOT_TOPIC];
-    subscriber<std::string> reboot_sub(REBOOT_TOPIC, reboot_module.msgkey);
+    auto upgrade_module = modules[UPGRADE_TOPIC];
+    subscriber<std::string> upgrade_sub(UPGRADE_TOPIC, upgrade_module.msgkey);
 
-    while (LISTEN_FOR_MODULE_REBOOTS) {
-	std::string module_path = reboot_sub.getData();
-	kill_module(module_path, *modules);
+    while (LISTEN_FOR_MODULE_UPGRADES) {
+	std::string module_path = upgrade_sub.get_data();
+	kill_module(module_path, &modules);
     }
 }
