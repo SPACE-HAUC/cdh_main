@@ -63,6 +63,14 @@ private:
     bool empty;
     T x;
 };
+template <typename T>
+Optional<T> Just(T value) {
+  return Optional<T>::Just(value);
+}
+template <typename T>
+Optional<T> None() {
+  return Optional<T>::None();
+}
 
 
 bool accessible(FilePath file);

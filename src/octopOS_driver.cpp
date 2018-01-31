@@ -33,12 +33,11 @@ const bool LISTEN_FOR_MODULE_UPGRADES = true;
 
 
 Optional<json> load(FilePath json_file) {
-    Optional<json> out = Optional<json>::None();
     if (accessible(json_file)) {
 	std::ifstream in(json_file);
-	out = Optional<json>::Just(json::parse(in));
+	return Just(json::parse(in));
     }
-    return out;
+    return None<json>();
 }
 
 // launches the given module in a new child process
@@ -96,23 +95,21 @@ std::list<FilePath> modules_in(FilePath dir) {
 
 // Returns a list of *complete* (relative or absolute) paths to the
 // files in DIRECTORY if directory is accessible.
-// Otherwise returns None.
 Optional< std::list<FilePath> > files_in(FilePath directory) {
     DIR *dir;
     struct dirent *ent;
-    Optional< std::list<FilePath> > list =
-      Optional< std::list<FilePath> >::None();
 
     dir = opendir(directory.c_str());
-    if (dir != NULL){
+    if (dir == NULL) {
+        return None<std::list<FilePath>>();
+    } else {
 	std::list<FilePath> files;
 	while (ent = readdir(dir)){
 	    files.push_front(ent->d_name);
 	}
-	list = Optional< std::list<FilePath> >::Just(files);
+	closedir(dir);
+	return Just(files);
     }
-    closedir(dir);
-    return list;
 }
 
 // Courtesy of:
@@ -163,8 +160,8 @@ Optional<std::string> find_module_with(pid_t pid, const ModuleInfo &modules) {
 				     return el.second.pid == pid;
 				 });
     if (moduleIt == modules.end()) {
-	return Optional<std::string>::None();
+	return None<std::string>();
     } else {
-	return Optional<std::string>::Just(moduleIt -> first);
+	return Just(moduleIt -> first);
     }
 }
