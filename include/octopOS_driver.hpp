@@ -43,7 +43,7 @@ pid_t launch(FilePath module, MemKey key);
 LaunchInfo launch_modules_in(FilePath dir, MemKey start_key);
 std::list<FilePath> modules_in(FilePath dir);
 Optional< std::list<FilePath> > files_in(FilePath dir);
-bool launch_listeners();
+bool launch_octopOS_listeners();
 Optional<std::string> find_module_with(pid_t pid, const ModuleInfo &modules);
 void reboot_module(std::string path, ModuleInfo *modules,
 		   publisher<std::string> &downgrade_pub);

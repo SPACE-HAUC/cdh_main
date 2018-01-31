@@ -2,12 +2,13 @@
 #define BOOST_TEST_MODULE octopOS_driver
 #include <boost/test/unit_test.hpp>
 
+#include "../include/Optional.hpp"
 #include "../include/octopOS_driver.hpp"
 #include "../include/octopos.h"
 
 BOOST_AUTO_TEST_CASE(optional_test) {
-    auto o = Optional<int>::Just(5);
-    auto n = Optional<int>::None();
+    auto o = Just(5);
+    auto n = None<int>();
     BOOST_REQUIRE(!o.isEmpty());
     BOOST_REQUIRE(n.isEmpty());
     BOOST_REQUIRE_NO_THROW(o.get());
@@ -38,9 +39,9 @@ BOOST_AUTO_TEST_CASE(launch_test) {
     BOOST_REQUIRE(pid > 1);
 }
 
-BOOST_AUTO_TEST_CASE(launch_listeners_test) {
+BOOST_AUTO_TEST_CASE(launch_octopOS_listeners_test) {
     octopOS::getInstance();
-    BOOST_REQUIRE(launch_listeners());
+    BOOST_REQUIRE(launch_octopOS_listeners());
 }
 
 BOOST_AUTO_TEST_CASE(files_in_test) {

@@ -34,13 +34,15 @@ int main(int argc, char const *argv[]) {
 
     LaunchInfo launched = launch_modules_in(config["modules_enabled"],
 					    current_key);
-    current_key = launched.second;
     ModuleInfo modules = launched.first;
+    // Keep track of the memkeys we've given out so that we can give valid ones
+    // when creating our own pub/subs
+    current_key = launched.second;
 
-    if (!launch_listeners()) {
-	std::cerr << "Critical Error: Unable to spawn listener threads."
-		  << "Exiting..." << std::endl;
-	return -1;
+    if (!launch_octopOS_listeners()) {
+	std::cerr << "Critical Error: Unable to spawn OctopOS listener threads."
+		  << " Exiting..." << std::endl;
+	return 2;
     }
 
 

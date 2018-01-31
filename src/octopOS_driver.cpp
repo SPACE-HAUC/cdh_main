@@ -41,6 +41,33 @@ Optional<json> load(FilePath json_file) {
     return None<json>();
 }
 
+// Courtesy of:
+// https://stackoverflow.com/questions/12774207/fastest-way-to-check-if
+// -a-file-exist-using-standard-c-c11-c
+bool accessible(FilePath file) {
+    struct stat buffer;
+    return (stat (file.c_str(), &buffer) == 0);
+}
+
+// Returns a list of *complete* (relative or absolute) paths to the
+// files in DIRECTORY if directory is accessible.
+Optional< std::list<FilePath> > files_in(FilePath directory) {
+    DIR *dir;
+    struct dirent *ent;
+
+    dir = opendir(directory.c_str());
+    if (dir == NULL) {
+        return None<std::list<FilePath>>();
+    } else {
+	std::list<FilePath> files;
+	while (ent = readdir(dir)){
+	    files.push_front(ent->d_name);
+	}
+	closedir(dir);
+	return Just(files);
+    }
+}
+
 // launches the given module in a new child process
 pid_t launch(FilePath module, MemKey key) {
     pid_t pid;
@@ -69,7 +96,7 @@ LaunchInfo launch_modules_in(FilePath dir, MemKey start_key) {
     return std::make_pair(modules, current_key);
 }
 
-bool launch_listeners() {
+bool launch_octopOS_listeners() {
     int x = 0;
     pthread_t tmp, sub_thread;
 
@@ -99,33 +126,6 @@ std::list<FilePath> modules_in(FilePath dir) {
     }
 
     return files.getDefault(std::list<FilePath>());
-}
-
-// Returns a list of *complete* (relative or absolute) paths to the
-// files in DIRECTORY if directory is accessible.
-Optional< std::list<FilePath> > files_in(FilePath directory) {
-    DIR *dir;
-    struct dirent *ent;
-
-    dir = opendir(directory.c_str());
-    if (dir == NULL) {
-        return None<std::list<FilePath>>();
-    } else {
-	std::list<FilePath> files;
-	while (ent = readdir(dir)){
-	    files.push_front(ent->d_name);
-	}
-	closedir(dir);
-	return Just(files);
-    }
-}
-
-// Courtesy of:
-// https://stackoverflow.com/questions/12774207/fastest-way-to-check-if
-// -a-file-exist-using-standard-c-c11-c
-bool accessible(FilePath file) {
-    struct stat buffer;
-    return (stat (file.c_str(), &buffer) == 0);
 }
 
 void kill_module(std::string path, ModuleInfo *modules) {
