@@ -26,11 +26,11 @@ typedef long MemKey;
 struct Module {
     pid_t pid;
     MemKey msgkey;
-    bool killed;
+    bool killed, downgrade_requested;
     time_t launch_time;
     Module(pid_t _pid, MemKey _msgkey, time_t _launch_time):
 	pid(_pid), msgkey(_msgkey), launch_time(_launch_time),
-	killed(false) { }
+	killed(false), downgrade_requested(false) { }
     Module() { } // c++ STL Map wants default constructor
 };
 typedef std::map<std::string, Module> ModuleInfo;

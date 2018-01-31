@@ -84,6 +84,13 @@ pid_t launch(FilePath module, MemKey key) {
     return pid;
 }
 
+void relaunch(Module &module, FilePath path) {
+    module.killed = false;
+    module.downgrade_requested = false;
+    module.pid = launch(path, module.msgkey);
+    module.launch_time = time(0);
+}
+
 LaunchInfo launch_modules_in(FilePath dir, MemKey start_key) {
     ModuleInfo modules;
     MemKey current_key = start_key;
@@ -146,19 +153,13 @@ void downgrade(FilePath module_name, publisher<std::string> &downgrade_pub) {
 void reboot_module(std::string path, ModuleInfo *modules,
 		   publisher<std::string> &downgrade_pub) {
     Module &module = (*modules)[path];
-    if (module.killed) {
-	// Death was intentional, just reboot
-	module.killed = false;
-	module.pid = launch(path, module.msgkey);
-	module.launch_time = time(0);
+    if (module.killed || !module_needs_downgrade(module)) {
+	// Death was intentional or unsuspicious
+	relaunch(module, path);
     } else {
-	// Something else happened
-	if (module_needs_downgrade(module)) {
-	  downgrade(path, downgrade_pub);
-	} else {
-	    module.pid = launch(path, module.msgkey);
-	    module.launch_time = time(0);
-	}
+	// Death suspicious
+	module.downgrade_requested = true;
+	downgrade(path, downgrade_pub);
     }
 }
 

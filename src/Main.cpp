@@ -54,6 +54,11 @@ int main(int argc, char const *argv[]) {
 
     while (LISTEN_FOR_MODULE_UPGRADES) {
 	std::string module_path = upgrade_sub.get_data();
-	kill_module(module_path, &modules);
+	Module &module = modules[module_path]
+	if (module.downgrade_requested) {
+	    relaunch(module, module_path);
+	} else {
+	    kill_module(module_path, &modules);
+	}
     }
 }

@@ -77,5 +77,5 @@ BOOST_AUTO_TEST_CASE(find_module_with_test) {
     BOOST_REQUIRE(oname2.get() == "a");
 }
 
-// launch, launch_modules_in, kill_module, downgrade, reboot_module
+// launch, relaunch, launch_modules_in, kill_module, downgrade, reboot_module
 // all require mocking to test effectively
