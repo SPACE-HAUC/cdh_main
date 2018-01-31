@@ -43,8 +43,15 @@ Optional<json> load(FilePath json_file) {
 // launches the given module in a new child process
 pid_t launch(FilePath module, MemKey key) {
     pid_t pid;
-    if (!(pid = fork())) { // child
+    switch(pid = fork()) {
+    case -1:
+	perror("Fork failed in attempting to launch module.");
+	break;
+    case 0: // child
         execl(module.c_str(), std::to_string(key).c_str(), (char*)0);
+	exit(0);
+    default: // parent
+	break;
     }
     return pid;
 }

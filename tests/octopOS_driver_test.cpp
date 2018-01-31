@@ -26,7 +26,7 @@ BOOST_AUTO_TEST_CASE(load_test) {
     Optional<json> oj = load("./thisfiledoesntexist!.88");
     BOOST_REQUIRE(oj.isEmpty());
 
-    Optional<json> oj2 = load("../test.json");
+    Optional<json> oj2 = load("./test.json");
     BOOST_REQUIRE(!oj2.isEmpty());
     json j = oj2.get();
     BOOST_REQUIRE(j["a"] == "something");
