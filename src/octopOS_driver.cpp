@@ -22,6 +22,7 @@
 #include <octopOS/octopos.h>
 #include <octopOS/subscriber.h>
 
+#include "../include/Optional.hpp"
 #include "../include/octopOS_driver.hpp"
 
 

@@ -1,9 +1,7 @@
 #ifndef _OCTOPOS_DRIVER_H_
 #define _OCTOPOS_DRIVER_H_
 
-#include "json.hpp" // TODO(llazarek): Replace with real lib
 #include <string>
-#include <stdexcept>
 #include <utility>
 #include <ctime>
 #include <map>
@@ -14,6 +12,9 @@
 #include <sys/wait.h>
 
 #include <octopOS/publisher.h>
+#include "json.hpp" // TODO(llazarek): Replace with real lib
+
+#include "Optional.hpp"
 
 extern const char* CONFIG_PATH;
 extern const char* UPGRADE_TOPIC;
@@ -35,43 +36,6 @@ struct Module {
 typedef std::map<std::string, Module> ModuleInfo;
 typedef std::pair<ModuleInfo, MemKey> LaunchInfo;
 typedef std::string FilePath;
-
-template <typename T>
-class Optional {
-public:
-    static Optional<T> None() {
-	return Optional(true);
-    }
-    static Optional<T> Just(T value) {
-	auto some = Optional(false);
-	some.x = value;
-	return some;
-    }
-    bool isEmpty() { return empty; }
-    T getDefault(T default_value) {
-	return empty ? default_value : x;
-    }
-    // throws: std::runtime_error
-    T get() {
-	if (empty) {
-	    throw std::runtime_error("Get on None");
-	}
-	return x;
-    }
-private:
-    Optional(bool is_none) : empty(is_none) {}
-    bool empty;
-    T x;
-};
-template <typename T>
-Optional<T> Just(T value) {
-  return Optional<T>::Just(value);
-}
-template <typename T>
-Optional<T> None() {
-  return Optional<T>::None();
-}
-
 
 bool accessible(FilePath file);
 Optional<json> load(FilePath json_file);
