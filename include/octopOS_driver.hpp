@@ -10,6 +10,7 @@
 #include <cstring> // for memset
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <queue>
 
 #include <octopOS/publisher.h>
 #include "json.hpp" // TODO(llazarek): Replace with real lib
@@ -63,27 +64,9 @@ public:
 	pthread_t tmp;
 
 	while ((pid = waitpid(-1, &status, WNOHANG)) != -1) {
-	    // handle all dead children in new threads
-	    pid_t* pid_ptr = (pid_t*)malloc(sizeof(pid_t));
-	    if (pid_ptr != NULL) {
-		*pid_ptr = pid;
-		pthread_create(&tmp, NULL, handle_dead_module, pid_ptr);
-	    }
+	    // handle all dead children later
+	    rebootQ.push(pid);
 	}
-    }
-
-    static void* handle_dead_module(void *pid_ptr) {
-	pid_t pid = *(pid_t*)pid_ptr;
-	free(pid_ptr);
-	Optional<std::string> found = find_module_with(pid, modules);
-	if (found.isEmpty()) {
-	    std::cerr << "Notification of unregistered module death. "
-		      << "Something has probably gone horribly wrong."
-		      << std::endl;
-	} else {
-	    reboot_module(found.get(), &modules, *downgrade_pub);
-	}
-	return NULL;
     }
 
     static void register_child_handler(ModuleInfo *_modules,
@@ -98,9 +81,24 @@ public:
 	sigaction(SIGCHLD, &sa, NULL);
     }
 
+    static void reboot_dead_modules() {
+	while(!rebootQ.empty()) {
+	    pid_t pid = rebootQ.pop();
+	    Optional<std::string> found = find_module_with(pid, modules);
+	    if (found.isEmpty()) {
+		std::cerr << "Notification of unregistered module death. "
+			  << "Something has probably gone horribly wrong."
+			  << std::endl;
+	    } else {
+		reboot_module(found.get(), &modules, *downgrade_pub);
+	    }
+	}
+    }
+
 private:
     static ModuleInfo &modules;
     static publisher<std::string> *downgrade_pub;
+    static std::queue<pid_t> rebootQ;
 };
 
 #endif /* _OCTOPOS_DRIVER_H_ */
