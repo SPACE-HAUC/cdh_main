@@ -16,11 +16,12 @@
 
 #include "Optional.hpp"
 
-extern const char* CONFIG_PATH;
-extern const char* UPGRADE_TOPIC;
-extern const char* DOWNGRADE_TOPIC;
+extern const char*  CONFIG_PATH;
+extern const char*  UPGRADE_TOPIC;
+extern const char*  DOWNGRADE_TOPIC;
 extern const time_t RUNTIME_CUTOFF_DOWNGRADE_S;
-extern const bool LISTEN_FOR_MODULE_UPGRADES;
+extern const int    DEATH_COUNT_CUTOFF_DOWNGRADE;
+extern const bool   LISTEN_FOR_MODULE_UPGRADES;
 
 typedef long MemKey;
 struct Module {
@@ -28,9 +29,11 @@ struct Module {
     MemKey msgkey;
     bool killed, downgrade_requested;
     time_t launch_time;
+    int early_death_count;
     Module(pid_t _pid, MemKey _msgkey, time_t _launch_time):
 	pid(_pid), msgkey(_msgkey), launch_time(_launch_time),
-	killed(false), downgrade_requested(false) { }
+	killed(false), downgrade_requested(false),
+	early_death_count(0) { }
     Module() { } // c++ STL Map wants default constructor
 };
 typedef std::map<std::string, Module> ModuleInfo;
@@ -48,7 +51,7 @@ Optional<std::string> find_module_with(pid_t pid, const ModuleInfo &modules);
 void reboot_module(std::string path, ModuleInfo *modules,
 		   publisher<std::string> &downgrade_pub);
 void kill_module(std::string path, ModuleInfo *modules);
-bool module_needs_downgrade(Module module);
+bool module_needs_downgrade(Module *module);
 
 
 class ChildHandler {

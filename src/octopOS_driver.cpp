@@ -26,11 +26,12 @@
 #include "../include/octopOS_driver.hpp"
 
 
-const char* CONFIG_PATH = "/etc/octopOS/config.json";
-const char* UPGRADE_TOPIC = "module_upgrade";
-const char* DOWNGRADE_TOPIC = "module_downgrade";
+const char*  CONFIG_PATH = "/etc/octopOS/config.json";
+const char*  UPGRADE_TOPIC = "module_upgrade";
+const char*  DOWNGRADE_TOPIC = "module_downgrade";
 const time_t RUNTIME_CUTOFF_DOWNGRADE_S = 60;
-const bool LISTEN_FOR_MODULE_UPGRADES = true;
+const int    DEATH_COUNT_CUTOFF_DOWNGRADE = 5;
+const bool   LISTEN_FOR_MODULE_UPGRADES = true;
 
 
 Optional<json> load(FilePath json_file) {
@@ -138,12 +139,25 @@ std::list<FilePath> modules_in(FilePath dir) {
 void kill_module(std::string path, ModuleInfo *modules) {
     Module &module = (*modules)[path];
     module.killed = true;
+    // Intentional deaths should reset early death counter
+    module.early_death_count = 0;
     kill(module.pid, SIGTERM);
 }
 
-bool module_needs_downgrade(Module module) {
-    // TODO(llazarek): Is this a sufficient heuristic?
-    return (time(0) - module.launch_time) < RUNTIME_CUTOFF_DOWNGRADE_S;
+// Modifies MODULE to record premature death if necessary
+bool module_needs_downgrade(Module *module) {
+    int died_quickly =
+	(time(0) - (module -> launch_time)) < RUNTIME_CUTOFF_DOWNGRADE_S;
+    if (died_quickly) {
+	module -> early_death_count += 1;
+    } else {
+	// "Normal" deaths should reset early death counter
+	module -> early_death_count = 0;
+    }
+    int died_too_many_times =
+	(module -> early_death_count) > DEATH_COUNT_CUTOFF_DOWNGRADE;
+
+    return died_quickly && died_too_many_times;
 }
 
 void downgrade(FilePath module_name, publisher<std::string> &downgrade_pub) {
@@ -153,12 +167,14 @@ void downgrade(FilePath module_name, publisher<std::string> &downgrade_pub) {
 void reboot_module(std::string path, ModuleInfo *modules,
 		   publisher<std::string> &downgrade_pub) {
     Module &module = (*modules)[path];
-    if (module.killed || !module_needs_downgrade(module)) {
+    if (module.killed || !module_needs_downgrade(&module)) {
 	// Death was intentional or unsuspicious
 	relaunch(module, path);
     } else {
-	// Death suspicious
+	// Death warrants downgrade
 	module.downgrade_requested = true;
+	// Reset death count to give downgraded module a chance
+	module.early_death_count = 0;
 	downgrade(path, downgrade_pub);
     }
 }

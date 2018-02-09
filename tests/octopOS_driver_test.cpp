@@ -56,9 +56,10 @@ BOOST_AUTO_TEST_CASE(files_in_test) {
 
 BOOST_AUTO_TEST_CASE(module_needs_downgrade_test) {
     Module m1(111, 1, 1); // launched a looooong time ago
-    BOOST_REQUIRE(!module_needs_downgrade(m1));
+    BOOST_REQUIRE(!module_needs_downgrade(&m1));
     Module m2(111, 1, time(0)); // launched just now
-    BOOST_REQUIRE(module_needs_downgrade(m2));
+    m2.early_death_count = 10; // and died early 10 times in a row
+    BOOST_REQUIRE(module_needs_downgrade(&m2));
 }
 
 BOOST_AUTO_TEST_CASE(find_module_with_test) {
