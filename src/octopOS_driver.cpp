@@ -85,6 +85,7 @@ pid_t launch(FilePath module, MemKey key) {
     return pid;
 }
 
+// Modifies MODULE
 void relaunch(Module &module, FilePath path) {
     module.killed = false;
     module.downgrade_requested = false;
@@ -136,6 +137,7 @@ std::list<FilePath> modules_in(FilePath dir) {
     return files.getDefault(std::list<FilePath>());
 }
 
+// Modifies MODULES[PATH]
 void kill_module(std::string path, ModuleInfo *modules) {
     Module &module = (*modules)[path];
     module.killed = true;
@@ -164,6 +166,7 @@ void downgrade(FilePath module_name, publisher<std::string> &downgrade_pub) {
     downgrade_pub.publish(module_name);
 }
 
+// Modifies MODULES[PATH]
 void reboot_module(std::string path, ModuleInfo *modules,
 		   publisher<std::string> &downgrade_pub) {
     Module &module = (*modules)[path];
