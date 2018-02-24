@@ -116,5 +116,23 @@ BOOST_AUTO_TEST_CASE(kill_module_test) {
     BOOST_REQUIRE(result > 1);
 }
 
-// +launch+, +relaunch+, launch_modules_in, kill_module, downgrade, reboot_module
+BOOST_AUTO_TEST_CASE(launch_modules_in_test) {
+    const FilePath path = "./modules";
+    auto olist = files_in(path);
+    BOOST_REQUIRE(!olist.isEmpty());
+    auto module_files = olist.get();
+    LaunchInfo info = launch_modules_in(path, 0);
+    ModuleInfo modules = info.first;
+    BOOST_REQUIRE(module_files.size() == modules.size());
+    for(std::pair<std::string, Module> m: modules) {
+	auto file = std::find(module_files.begin(),
+			      module_files.end(),
+			      m.first);
+	BOOST_REQUIRE(file != module_files.end());
+	BOOST_REQUIRE(m.second.pid > 1);
+	BOOST_REQUIRE(kill(m.second.pid, SIGTERM) == 0);
+    }
+}
+
+// +launch+, +relaunch+, +launch_modules_in+, +kill_module+, downgrade, reboot_module
 // all require mocking to test effectively
