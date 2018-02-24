@@ -44,6 +44,7 @@ typedef std::string FilePath;
 bool accessible(FilePath file);
 Optional<json> load(FilePath json_file);
 pid_t launch(FilePath module, MemKey key);
+void relaunch(Module &module, FilePath path);
 LaunchInfo launch_modules_in(FilePath dir, MemKey start_key);
 std::list<FilePath> modules_in(FilePath dir);
 Optional< std::list<FilePath> > files_in(FilePath dir);

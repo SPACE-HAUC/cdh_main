@@ -1,5 +1,8 @@
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE octopOS_driver
+// Child deaths are not an error
+#define BOOST_TEST_IGNORE_NON_ZERO_CHILD_CODE
+#define BOOST_TEST_IGNORE_SIGCHLD
 #include <boost/test/unit_test.hpp>
 
 #include "../include/Optional.hpp"
@@ -37,6 +40,10 @@ BOOST_AUTO_TEST_CASE(load_test) {
 BOOST_AUTO_TEST_CASE(launch_test) {
     pid_t pid = launch("echo", 1);
     BOOST_REQUIRE(pid > 1);
+    pid = launch("./modules/test_module", 0);
+    BOOST_REQUIRE(pid > 1);
+    sleep(5);
+    BOOST_REQUIRE(kill(pid, SIGTERM) == 0);
 }
 
 BOOST_AUTO_TEST_CASE(launch_octopOS_listeners_test) {
@@ -78,5 +85,36 @@ BOOST_AUTO_TEST_CASE(find_module_with_test) {
     BOOST_REQUIRE(oname2.get() == "a");
 }
 
-// launch, relaunch, launch_modules_in, kill_module, downgrade, reboot_module
+BOOST_AUTO_TEST_CASE(relaunch_test) {
+    Module m(-1, 0, time(0));
+    relaunch(m, "./modules/test_module");
+    BOOST_REQUIRE(m.pid > 1);
+    BOOST_REQUIRE(!m.killed);
+    BOOST_REQUIRE(!m.downgrade_requested);
+    BOOST_REQUIRE(time(0) - m.launch_time < 2000);
+    sleep(5);
+    BOOST_REQUIRE(kill(m.pid, SIGTERM) == 0);
+}
+
+// Problem: boost catches sigchld and makes it fail the test case
+// apparently no way to disable without editing source of boost?
+BOOST_AUTO_TEST_CASE(kill_module_test) {
+    const FilePath path = "./modules/test_module";
+    pid_t pid = launch(path, 0);
+    Module m = Module(pid, 0, time(0));
+    ModuleInfo modules = {{path, m}};
+
+    BOOST_REQUIRE(pid > 1);
+    sleep(5);
+    BOOST_REQUIRE(kill_module(path, &modules) != -1);
+    BOOST_REQUIRE(modules[path].killed);
+    BOOST_REQUIRE(modules[path].early_death_count == 0);
+    sleep(5);
+    // Check that child actually died
+    int status;
+    pid_t result = waitpid(pid, &status, WNOHANG);
+    BOOST_REQUIRE(result > 1);
+}
+
+// +launch+, +relaunch+, launch_modules_in, kill_module, downgrade, reboot_module
 // all require mocking to test effectively
