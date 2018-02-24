@@ -51,7 +51,7 @@ bool launch_octopOS_listeners();
 Optional<std::string> find_module_with(pid_t pid, const ModuleInfo &modules);
 void reboot_module(std::string path, ModuleInfo *modules,
 		   publisher<std::string> &downgrade_pub);
-void kill_module(std::string path, ModuleInfo *modules);
+int kill_module(std::string path, ModuleInfo *modules);
 bool module_needs_downgrade(Module *module);
 
 

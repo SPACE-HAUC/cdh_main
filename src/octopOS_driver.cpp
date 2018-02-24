@@ -138,12 +138,12 @@ std::list<FilePath> modules_in(FilePath dir) {
 }
 
 // Modifies MODULES[PATH]
-void kill_module(std::string path, ModuleInfo *modules) {
+int kill_module(std::string path, ModuleInfo *modules) {
     Module &module = (*modules)[path];
     module.killed = true;
     // Intentional deaths should reset early death counter
     module.early_death_count = 0;
-    kill(module.pid, SIGTERM);
+    return kill(module.pid, SIGTERM);
 }
 
 // Modifies MODULE to record premature death if necessary
