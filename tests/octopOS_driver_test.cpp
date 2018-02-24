@@ -42,7 +42,7 @@ BOOST_AUTO_TEST_CASE(launch_test) {
     BOOST_REQUIRE(pid > 1);
     pid = launch("./modules/test_module", 0);
     BOOST_REQUIRE(pid > 1);
-    sleep(5);
+    sleep(1);
     BOOST_REQUIRE(kill(pid, SIGTERM) == 0);
 }
 
@@ -92,7 +92,7 @@ BOOST_AUTO_TEST_CASE(relaunch_test) {
     BOOST_REQUIRE(!m.killed);
     BOOST_REQUIRE(!m.downgrade_requested);
     BOOST_REQUIRE(time(0) - m.launch_time < 2000);
-    sleep(5);
+    sleep(1);
     BOOST_REQUIRE(kill(m.pid, SIGTERM) == 0);
 }
 
@@ -105,11 +105,11 @@ BOOST_AUTO_TEST_CASE(kill_module_test) {
     ModuleInfo modules = {{path, m}};
 
     BOOST_REQUIRE(pid > 1);
-    sleep(5);
+    sleep(1);
     BOOST_REQUIRE(kill_module(path, &modules) != -1);
     BOOST_REQUIRE(modules[path].killed);
     BOOST_REQUIRE(modules[path].early_death_count == 0);
-    sleep(5);
+    sleep(1);
     // Check that child actually died
     int status;
     pid_t result = waitpid(pid, &status, WNOHANG);
