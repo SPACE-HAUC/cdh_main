@@ -93,6 +93,10 @@ void relaunch(Module &module, FilePath path) {
     module.launch_time = time(0);
 }
 
+bool launch_octopOS_listener_for_child(MemKey tentacle_ID) {
+    return !pthread_create(&tmp, NULL, octopOS::listen_for_child, &tentacle_ID)
+}
+
 LaunchInfo launch_modules_in(FilePath dir, MemKey start_key) {
     ModuleInfo modules;
     MemKey current_key = start_key;
@@ -100,21 +104,18 @@ LaunchInfo launch_modules_in(FilePath dir, MemKey start_key) {
     for (FilePath module : modules_in(dir)) {
 	pid_t pid = launch(module, current_key);
 	modules[module] = Module(pid, current_key, time(0));
+	launch_octopOS_listener_for_child(current_key);
 	current_key++;
     }
     return std::make_pair(modules, current_key);
 }
 
 bool launch_octopOS_listeners() {
-    int x = 0;
+    int sharedQ = MSGKEY;
     pthread_t tmp, sub_thread;
 
-    if (pthread_create(&tmp, NULL, octopOS::listen_for_child, &x)) {
-	return false;
-    }
-
     if (pthread_create(&sub_thread, NULL,
-		       subscriber_manager::wait_for_data, &x)) {
+		       subscriber_manager::wait_for_data, &sharedQ)) {
 	return false;
     }
 

@@ -143,6 +143,8 @@ class mock_publisher: public publisher<std::string> {
 };
 
 BOOST_AUTO_TEST_CASE(reboot_module_test) {
+    // spin up octopos
+    // pass tentacle MSGKEY
     const FilePath path = "./modules";
     LaunchInfo info = launch_modules_in(path, 0);
     ModuleInfo modules = info.first;
