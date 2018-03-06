@@ -45,26 +45,5 @@ int main(int argc, char const *argv[]) {
 	return 2;
     }
 
-
-    publisher<std::string> downgrade_pub(DOWNGRADE_TOPIC, current_key++);
-    ChildHandler::register_child_handler(&modules, &downgrade_pub);
-
-    auto upgrade_module = modules[UPGRADE_TOPIC];
-    subscriber<std::string> upgrade_sub(UPGRADE_TOPIC, upgrade_module.msgkey);
-
-    while (1) {
-	// reboot any dead modules
-	ChildHandler::reboot_dead_modules();
-
-	// check for upgrade data
-	if(upgrade_sub.data_available()) {
-	    std::string module_path = upgrade_sub.get_data();
-	    Module &module = modules[module_path];
-	    if (module.downgrade_requested) {
-		relaunch(module, module_path);
-	    } else {
-		kill_module(module_path, &modules);
-	    }
-	}
-    }
+    babysit_forever(modules);
 }

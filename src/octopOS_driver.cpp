@@ -194,3 +194,29 @@ Optional<std::string> find_module_with(pid_t pid, const ModuleInfo &modules) {
 	return Just(moduleIt -> first);
     }
 }
+
+// Watch over children, rebooting and upgrading modules
+void babysit_forever(ModuleInfo &modules) {
+    auto upgrade_module = modules[UPGRADE_TOPIC];
+    publisher<std::string> downgrade_pub(DOWNGRADE_TOPIC,
+					 upgrade_module.msgkey);
+    ChildHandler::register_child_handler(&modules, &downgrade_pub);
+
+    subscriber<std::string> upgrade_sub(UPGRADE_TOPIC, upgrade_module.msgkey);
+
+    while (1) {
+	// reboot any dead modules
+	ChildHandler::reboot_dead_modules();
+
+	// check for upgrade data
+	if(upgrade_sub.data_available()) {
+	    std::string module_path = upgrade_sub.get_data();
+	    Module &module = modules[module_path];
+	    if (module.downgrade_requested) {
+		relaunch(module, module_path);
+	    } else {
+		kill_module(module_path, &modules);
+	    }
+	}
+    }
+}
