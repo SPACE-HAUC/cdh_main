@@ -134,21 +134,17 @@ BOOST_AUTO_TEST_CASE(launch_modules_in_test) {
     }
 }
 
-class mock_publisher: public publisher<std::string> {
-    int pub_count;
-    mock_publisher(): pub_count(0) {}
-    void publish(std::string msg) {
-	pub_count++;
-    }
-};
-
 BOOST_AUTO_TEST_CASE(reboot_module_test) {
+    printf("\n\nStarting reboot\n\n");
     // spin up octopos
-    // pass tentacle MSGKEY
+    octopOS &ocotpos = octopOS::getInstance();
+    MemKey current_key = MSGKEY;
+    publisher<std::string> downgrade_pub(DOWNGRADE_TOPIC, current_key++);
+    subscriber<std::string> downgrade_sub(DOWNGRADE_TOPIC, current_key - 1);
+
     const FilePath path = "./modules";
-    LaunchInfo info = launch_modules_in(path, 0);
+    LaunchInfo info = launch_modules_in(path, current_key);
     ModuleInfo modules = info.first;
-    publisher<std::string> = mock_publisher();
 
     // first reboot on a module that shouldn't be downgraded because
     // it hasn't died enough times
@@ -156,13 +152,14 @@ BOOST_AUTO_TEST_CASE(reboot_module_test) {
     Module m1 = modules[module1];
     pid_t oldpid = m1.pid;
     BOOST_REQUIRE(kill(m1.pid, SIGTERM) != -1);
-    reboot_module(module1, &modules, mock_publisher);
+    reboot_module(module1, &modules, downgrade_pub);
     m1 = modules[module1]; // the Module has changed
     BOOST_REQUIRE(m1.pid != oldpid);
     BOOST_REQUIRE(m1.pid > 1);
     BOOST_REQUIRE(!m1.killed);
     BOOST_REQUIRE(!m1.downgrade_requested);
-    BOOST_REQUIRE(mock_publisher.pub_count == 0);
+    sleep(1);
+    BOOST_REQUIRE(!downgrade_sub.data_available());
     BOOST_REQUIRE(m1.early_death_count == 1);
 
     sleep(1);
@@ -171,11 +168,12 @@ BOOST_AUTO_TEST_CASE(reboot_module_test) {
     oldpid = m1.pid;
     m1.early_death_count = DEATH_COUNT_CUTOFF_DOWNGRADE;
     BOOST_REQUIRE(kill(m1.pid, SIGTERM) != -1);
-    reboot_module(module1, &modules, mock_publisher);
+    reboot_module(module1, &modules, downgrade_pub);
     BOOST_REQUIRE(m1.pid == oldpid);
     BOOST_REQUIRE(!m1.killed);
     BOOST_REQUIRE(m1.downgrade_requested);
-    BOOST_REQUIRE(mock_publisher.pub_count == 1);
+    BOOST_REQUIRE(downgrade_sub.data_available());
+    BOOST_REQUIRE(downgrade_sub.get_data() == module1);
     BOOST_REQUIRE(m1.early_death_count == 0);
 
     sleep(1);
@@ -186,12 +184,76 @@ BOOST_AUTO_TEST_CASE(reboot_module_test) {
     oldpid = m2.pid;
     BOOST_REQUIRE(kill_module(module2, &modules) != -1);
     BOOST_REQUIRE(m2.killed);
-    reboot_module(module2, &modules, mock_publisher);
+    reboot_module(module2, &modules, downgrade_pub);
     m2 = modules[module2]; // the Module has changed
     BOOST_REQUIRE(m2.pid != oldpid);
     BOOST_REQUIRE(m2.pid > 1);
     BOOST_REQUIRE(!m1.killed);
     BOOST_REQUIRE(!m1.downgrade_requested);
-    BOOST_REQUIRE(mock_publisher.pub_count == 1);
+    BOOST_REQUIRE(!downgrade_sub.data_available());
+    BOOST_REQUIRE(m1.early_death_count == 0);
+}
+
+void* run_babysit_forever(void *modules) {
+    babysit_forever(*(ModuleInfo*)modules);
+    return NULL;
+}
+
+BOOST_AUTO_TEST_CASE(babysit_forever_test) {
+    printf("\n\nStarting babysit\n\n");
+    octopOS &ocotpos = octopOS::getInstance();
+    MemKey current_key = MSGKEY;
+    publisher<std::string> downgrade_pub(DOWNGRADE_TOPIC, current_key++);
+    subscriber<std::string> downgrade_sub(DOWNGRADE_TOPIC, current_key - 1);
+
+    const FilePath path = "./modules";
+    LaunchInfo info = launch_modules_in(path, current_key);
+    ModuleInfo modules = info.first;
+
+    pthread_t babysit_thread;
+    BOOST_REQUIRE(!pthread_create(&babysit_thread, NULL,
+				  run_babysit_forever, (void*)(&modules)));
+
+    // first reboot on a module that shouldn't be downgraded because
+    // it hasn't died enough times
+    const FilePath module1 = path + "/test_module";
+    Module m1 = modules[module1];
+    pid_t oldpid = m1.pid;
+    BOOST_REQUIRE(kill(m1.pid, SIGTERM) != -1);
+    sleep(1);
+    BOOST_REQUIRE(m1.pid != oldpid);
+    BOOST_REQUIRE(m1.pid > 1);
+    BOOST_REQUIRE(!m1.killed);
+    BOOST_REQUIRE(!m1.downgrade_requested);
+    BOOST_REQUIRE(!downgrade_sub.data_available());
+    BOOST_REQUIRE(m1.early_death_count == 1);
+
+    sleep(1);
+    // now reboot on a module that SHOULD be downgraded because it has
+    // died too many times
+    oldpid = m1.pid;
+    m1.early_death_count = DEATH_COUNT_CUTOFF_DOWNGRADE;
+    sleep(1);
+    BOOST_REQUIRE(m1.pid == oldpid);
+    BOOST_REQUIRE(!m1.killed);
+    BOOST_REQUIRE(m1.downgrade_requested);
+    BOOST_REQUIRE(downgrade_sub.data_available());
+    BOOST_REQUIRE(downgrade_sub.get_data() == module1);
+    BOOST_REQUIRE(m1.early_death_count == 0);
+
+    sleep(1);
+    // now reboot on a module that shouldn't be downgraded because it
+    // was killed intentionally
+    const FilePath module2 = path + "/test_module1";
+    Module m2 = modules[module2];
+    oldpid = m2.pid;
+    BOOST_REQUIRE(kill_module(module2, &modules) != -1);
+    BOOST_REQUIRE(m2.killed);
+    sleep(1);
+    BOOST_REQUIRE(m2.pid != oldpid);
+    BOOST_REQUIRE(m2.pid > 1);
+    BOOST_REQUIRE(!m1.killed);
+    BOOST_REQUIRE(!m1.downgrade_requested);
+    BOOST_REQUIRE(!downgrade_sub.data_available());
     BOOST_REQUIRE(m1.early_death_count == 0);
 }
