@@ -73,7 +73,7 @@ public:
 
     static void register_child_handler(ModuleInfo *_modules,
 				       publisher<std::string> *_downgrade_pub) {
-	modules = *_modules;
+	modules = _modules;
 	downgrade_pub = _downgrade_pub;
 	struct sigaction sa;
 
@@ -87,19 +87,19 @@ public:
 	while(!rebootQ.empty()) {
 	    pid_t pid = rebootQ.front();
 	    rebootQ.pop();
-	    Optional<std::string> found = find_module_with(pid, modules);
+	    Optional<std::string> found = find_module_with(pid, *modules);
 	    if (found.isEmpty()) {
 		std::cerr << "Notification of unregistered module death. "
 			  << "Something has probably gone horribly wrong."
 			  << std::endl;
 	    } else {
-		reboot_module(found.get(), &modules, *downgrade_pub);
+		reboot_module(found.get(), modules, *downgrade_pub);
 	    }
 	}
     }
 
 private:
-    static ModuleInfo &modules;
+    static ModuleInfo *modules;
     static publisher<std::string> *downgrade_pub;
     static std::queue<pid_t> rebootQ;
 };

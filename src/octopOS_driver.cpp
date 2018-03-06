@@ -33,6 +33,10 @@ const time_t RUNTIME_CUTOFF_DOWNGRADE_S = 60;
 const int    DEATH_COUNT_CUTOFF_DOWNGRADE = 5;
 const bool   LISTEN_FOR_MODULE_UPGRADES = true;
 
+std::queue<pid_t> ChildHandler::rebootQ;
+ModuleInfo *ChildHandler::modules;
+publisher<std::string> *ChildHandler::downgrade_pub;
+
 
 Optional<json> load(FilePath json_file) {
     if (accessible(json_file)) {
@@ -94,7 +98,9 @@ void relaunch(Module &module, FilePath path) {
 }
 
 bool launch_octopOS_listener_for_child(MemKey tentacle_ID) {
-    return !pthread_create(&tmp, NULL, octopOS::listen_for_child, &tentacle_ID)
+    int tmp;
+    return !pthread_create((pthread_t*)&tmp, NULL, octopOS::listen_for_child,
+			   &tentacle_ID);
 }
 
 LaunchInfo launch_modules_in(FilePath dir, MemKey start_key) {
