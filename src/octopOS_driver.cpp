@@ -66,9 +66,14 @@ Optional< std::list<FilePath> > files_in(FilePath directory) {
     } else {
 	std::list<FilePath> files;
 	while (ent = readdir(dir)){
-	    files.push_front(ent->d_name);
+	    std::string file = ent->d_name;
+	    // Don't add "." and ".."
+	    if(file != "." && file != "..") {
+		files.push_front(directory + "/" + file);
+	    }
 	}
 	closedir(dir);
+
 	return Just(files);
     }
 }
