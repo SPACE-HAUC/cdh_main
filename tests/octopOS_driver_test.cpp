@@ -58,7 +58,9 @@ BOOST_AUTO_TEST_CASE(files_in_test) {
     BOOST_REQUIRE(list.size() >= 1);
     // list should return full paths - not just filename
     std::string path = "../tests/";
-    BOOST_REQUIRE(list.front().compare(0, path.size(), path));
+    for(FilePath f: list) {
+      BOOST_REQUIRE(f.compare(0, path.size(), path) == 0);
+    }
 }
 
 BOOST_AUTO_TEST_CASE(module_needs_downgrade_test) {
