@@ -55,6 +55,7 @@ void reboot_module(std::string path, ModuleInfo *modules,
 int kill_module(std::string path, ModuleInfo *modules);
 bool module_needs_downgrade(Module *module);
 void babysit_forever(ModuleInfo &modules);
+octopOS& launch_ocotopOS();
 
 
 class ChildHandler {

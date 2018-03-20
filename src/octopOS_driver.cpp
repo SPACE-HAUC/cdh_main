@@ -104,8 +104,16 @@ void relaunch(Module &module, FilePath path) {
 
 bool launch_octopOS_listener_for_child(MemKey tentacle_ID) {
     int tmp;
+    // tentacle_ID should be a somewhat persistent pointer, because
+    // pthread_create casts it to a int* and then derefs it to get the
+    // value
+    MemKey *idptr = NULL;
+    if((idptr = (MemKey*)malloc(sizeof(MemKey))) == NULL) {
+      return false;
+    }
+    *idptr = tentacle_ID;
     return !pthread_create((pthread_t*)&tmp, NULL, octopOS::listen_for_child,
-			   &tentacle_ID);
+			   idptr);
 }
 
 LaunchInfo launch_modules_in(FilePath dir, MemKey start_key) {
@@ -122,15 +130,17 @@ LaunchInfo launch_modules_in(FilePath dir, MemKey start_key) {
 }
 
 bool launch_octopOS_listeners() {
-    int sharedQ = MSGKEY;
-    pthread_t tmp, sub_thread;
+    pthread_t sub_thread;
 
-    if (pthread_create(&sub_thread, NULL,
-		       subscriber_manager::wait_for_data, &sharedQ)) {
-	return false;
-    }
+    // Apparently wait_for_data doesn't need any arguments?
+    // int *sharedQ;
+    // if ((sharedQ = (int*)malloc(sizeof(MSGKEY))) == NULL) {
+    // 	return false;
+    // }
+    // *sharedQ = MSGKEY;
 
-    return true;
+    return !pthread_create(&sub_thread, NULL,
+			   subscriber_manager::wait_for_data, NULL);
 }
 
 
@@ -230,4 +240,16 @@ void babysit_forever(ModuleInfo &modules) {
 	    }
 	}
     }
+}
+
+octopOS& launch_ocotopOS() {
+    octopOS &octopos = octopOS::getInstance();
+
+    if (!launch_octopOS_listeners()) {
+	std::cerr << "Critical Error: Unable to spawn OctopOS listener threads."
+		  << " Exiting..." << std::endl;
+	exit(2);
+    }
+
+    return octopos;
 }

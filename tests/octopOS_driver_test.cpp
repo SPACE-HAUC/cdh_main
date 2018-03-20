@@ -8,6 +8,12 @@
 #include "../include/Optional.hpp"
 #include "../include/octopOS_driver.hpp"
 #include "../include/octopos.h"
+#include "../include/subscriber.h"
+#include "../include/publisher.h"
+
+BOOST_AUTO_TEST_CASE(launch_octopOS_test) {
+    launch_ocotopOS();
+}
 
 BOOST_AUTO_TEST_CASE(optional_test) {
     auto o = Just(5);
@@ -38,6 +44,7 @@ BOOST_AUTO_TEST_CASE(load_test) {
 }
 
 BOOST_AUTO_TEST_CASE(launch_test) {
+    BOOST_REQUIRE_NO_THROW(octopOS::getInstance());
     pid_t pid = launch("echo", 1);
     BOOST_REQUIRE(pid > 1);
     pid = launch("./modules/test_module", 0);
@@ -47,7 +54,7 @@ BOOST_AUTO_TEST_CASE(launch_test) {
 }
 
 BOOST_AUTO_TEST_CASE(launch_octopOS_listeners_test) {
-    octopOS::getInstance();
+    BOOST_REQUIRE_NO_THROW(octopOS::getInstance());
     BOOST_REQUIRE(launch_octopOS_listeners());
 }
 
@@ -88,6 +95,7 @@ BOOST_AUTO_TEST_CASE(find_module_with_test) {
 }
 
 BOOST_AUTO_TEST_CASE(relaunch_test) {
+    BOOST_REQUIRE_NO_THROW(octopOS::getInstance());
     Module m(-1, 0, time(0));
     relaunch(m, "./modules/test_module");
     BOOST_REQUIRE(m.pid > 1);
@@ -101,6 +109,7 @@ BOOST_AUTO_TEST_CASE(relaunch_test) {
 // Problem: boost catches sigchld and makes it fail the test case
 // apparently no way to disable without editing source of boost?
 BOOST_AUTO_TEST_CASE(kill_module_test) {
+    BOOST_REQUIRE_NO_THROW(octopOS::getInstance());
     const FilePath path = "./modules/test_module";
     pid_t pid = launch(path, 0);
     Module m = Module(pid, 0, time(0));
@@ -119,6 +128,8 @@ BOOST_AUTO_TEST_CASE(kill_module_test) {
 }
 
 BOOST_AUTO_TEST_CASE(launch_modules_in_test) {
+    BOOST_REQUIRE_NO_THROW(octopOS::getInstance());
+    printf("\n\nStarting launch_in\n\n");
     const FilePath path = "./modules";
     auto olist = files_in(path);
     BOOST_REQUIRE(!olist.isEmpty());
@@ -126,17 +137,21 @@ BOOST_AUTO_TEST_CASE(launch_modules_in_test) {
     LaunchInfo info = launch_modules_in(path, 0);
     ModuleInfo modules = info.first;
     BOOST_REQUIRE(module_files.size() == modules.size());
+    sleep(1);
     for(std::pair<std::string, Module> m: modules) {
 	auto file = std::find(module_files.begin(),
 			      module_files.end(),
 			      m.first);
 	BOOST_REQUIRE(file != module_files.end());
 	BOOST_REQUIRE(m.second.pid > 1);
+	std::cout << "Killing module with pid " << m.second.pid << std::endl;
 	BOOST_REQUIRE(kill(m.second.pid, SIGTERM) == 0);
     }
+    printf("\n\nFinished launch_in\n\n");
 }
 
 BOOST_AUTO_TEST_CASE(reboot_module_test) {
+    BOOST_REQUIRE_NO_THROW(octopOS::getInstance());
     printf("\n\nStarting reboot\n\n");
     // spin up octopos
     octopOS &ocotpos = octopOS::getInstance();
@@ -202,6 +217,7 @@ void* run_babysit_forever(void *modules) {
 }
 
 BOOST_AUTO_TEST_CASE(babysit_forever_test) {
+    BOOST_REQUIRE_NO_THROW(octopOS::getInstance());
     printf("\n\nStarting babysit\n\n");
     octopOS &ocotpos = octopOS::getInstance();
     MemKey current_key = MSGKEY;

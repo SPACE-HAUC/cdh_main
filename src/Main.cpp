@@ -19,7 +19,7 @@
 #include "../include/octopOS_driver.hpp"
 
 int main(int argc, char const *argv[]) {
-    octopOS &octopos = octopOS::getInstance();
+    octopOS &octopos = launch_ocotopOS();
     MemKey current_key = MSGKEY;
 
     Optional<json> maybe_config = load(CONFIG_PATH);
@@ -38,12 +38,6 @@ int main(int argc, char const *argv[]) {
     // Keep track of the memkeys we've given out so that we can give valid ones
     // when creating our own pub/subs
     current_key = launched.second;
-
-    if (!launch_octopOS_listeners()) {
-	std::cerr << "Critical Error: Unable to spawn OctopOS listener threads."
-		  << " Exiting..." << std::endl;
-	return 2;
-    }
 
     babysit_forever(modules);
 }
