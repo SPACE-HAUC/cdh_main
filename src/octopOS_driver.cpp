@@ -98,32 +98,33 @@ pid_t launch(FilePath module, MemKey key) {
 void relaunch(Module &module, FilePath path) {
     module.killed = false;
     module.downgrade_requested = false;
-    module.pid = launch(path, module.msgkey);
+    module.pid = launch(path, module.tentacle_id);
     module.launch_time = time(0);
 }
 
-bool launch_octopOS_listener_for_child(MemKey tentacle_ID) {
+bool launch_octopOS_listener_for_child(int tentacle_index) {
     int tmp;
     // tentacle_ID should be a somewhat persistent pointer, because
     // pthread_create casts it to a int* and then derefs it to get the
     // value
-    MemKey *idptr = NULL;
-    if((idptr = (MemKey*)malloc(sizeof(MemKey))) == NULL) {
+    MemKey *idxptr = NULL;
+    if((idxptr = (MemKey*)malloc(sizeof(MemKey))) == NULL) {
       return false;
     }
-    *idptr = tentacle_ID;
+    *idxptr = tentacle_index;
     return !pthread_create((pthread_t*)&tmp, NULL, octopOS::listen_for_child,
-			   idptr);
+			   idxptr);
 }
 
 LaunchInfo launch_modules_in(FilePath dir, MemKey start_key) {
     ModuleInfo modules;
+    std::cout << "Launch: current key = " << start_key << std::endl; // tmp
     MemKey current_key = start_key;
     pid_t pid;
     for (FilePath module : modules_in(dir)) {
 	pid_t pid = launch(module, current_key);
-	modules[module] = Module(pid, current_key, time(0));
-	launch_octopOS_listener_for_child(current_key);
+	modules[module] = Module(pid, current_key - MSGKEY, time(0));
+	launch_octopOS_listener_for_child(modules[module].tentacle_id);
 	current_key++;
     }
     return std::make_pair(modules, current_key);
@@ -220,10 +221,11 @@ Optional<std::string> find_module_with(pid_t pid, const ModuleInfo &modules) {
 void babysit_forever(ModuleInfo &modules) {
     auto upgrade_module = modules[UPGRADE_TOPIC];
     publisher<std::string> downgrade_pub(DOWNGRADE_TOPIC,
-					 upgrade_module.msgkey);
+					 upgrade_module.tentacle_id);
     ChildHandler::register_child_handler(&modules, &downgrade_pub);
 
-    subscriber<std::string> upgrade_sub(UPGRADE_TOPIC, upgrade_module.msgkey);
+    subscriber<std::string> upgrade_sub(UPGRADE_TOPIC,
+					upgrade_module.tentacle_id);
 
     while (1) {
 	// reboot any dead modules
@@ -242,7 +244,7 @@ void babysit_forever(ModuleInfo &modules) {
     }
 }
 
-octopOS& launch_ocotopOS() {
+octopOS& launch_octopOS() {
     octopOS &octopos = octopOS::getInstance();
 
     if (!launch_octopOS_listeners()) {

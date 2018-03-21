@@ -27,12 +27,12 @@ extern const bool   LISTEN_FOR_MODULE_UPGRADES;
 typedef long MemKey;
 struct Module {
     pid_t pid;
-    MemKey msgkey;
+    int tentacle_id;
     bool killed, downgrade_requested;
     time_t launch_time;
     int early_death_count;
-    Module(pid_t _pid, MemKey _msgkey, time_t _launch_time):
-	pid(_pid), msgkey(_msgkey), launch_time(_launch_time),
+    Module(pid_t _pid, int _tentacle_id, time_t _launch_time):
+	pid(_pid), tentacle_id(_tentacle_id), launch_time(_launch_time),
 	killed(false), downgrade_requested(false),
 	early_death_count(0) { }
     Module() { } // c++ STL Map wants default constructor
@@ -55,7 +55,7 @@ void reboot_module(std::string path, ModuleInfo *modules,
 int kill_module(std::string path, ModuleInfo *modules);
 bool module_needs_downgrade(Module *module);
 void babysit_forever(ModuleInfo &modules);
-octopOS& launch_ocotopOS();
+octopOS& launch_octopOS();
 
 
 class ChildHandler {

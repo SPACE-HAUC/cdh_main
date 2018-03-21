@@ -11,9 +11,18 @@
 #include "../include/subscriber.h"
 #include "../include/publisher.h"
 
-BOOST_AUTO_TEST_CASE(launch_octopOS_test) {
-    launch_ocotopOS();
-}
+// BOOST_AUTO_TEST_CASE(launch_octopOS_test) {
+    // launch_octopOS();
+// }
+
+struct F {
+    F() : octopos(launch_octopOS()) {}
+    ~F() {}
+
+    octopOS &octopos;
+};
+
+BOOST_FIXTURE_TEST_SUITE( s, F )
 
 BOOST_AUTO_TEST_CASE(optional_test) {
     auto o = Just(5);
@@ -44,13 +53,13 @@ BOOST_AUTO_TEST_CASE(load_test) {
 }
 
 BOOST_AUTO_TEST_CASE(launch_test) {
+    std::cout << "Beginning of launch_test" << std::endl;
     BOOST_REQUIRE_NO_THROW(octopOS::getInstance());
-    pid_t pid = launch("echo", 1);
-    BOOST_REQUIRE(pid > 1);
-    pid = launch("./modules/test_module", 0);
+    pid_t pid = launch("./modules/test_module", 0);
     BOOST_REQUIRE(pid > 1);
     sleep(1);
     BOOST_REQUIRE(kill(pid, SIGTERM) == 0);
+    std::cout << "End of launch_test" << std::endl;
 }
 
 BOOST_AUTO_TEST_CASE(launch_octopOS_listeners_test) {
@@ -134,7 +143,7 @@ BOOST_AUTO_TEST_CASE(launch_modules_in_test) {
     auto olist = files_in(path);
     BOOST_REQUIRE(!olist.isEmpty());
     auto module_files = olist.get();
-    LaunchInfo info = launch_modules_in(path, 0);
+    LaunchInfo info = launch_modules_in(path, MSGKEY);
     ModuleInfo modules = info.first;
     BOOST_REQUIRE(module_files.size() == modules.size());
     sleep(1);
@@ -151,12 +160,14 @@ BOOST_AUTO_TEST_CASE(launch_modules_in_test) {
 }
 
 BOOST_AUTO_TEST_CASE(reboot_module_test) {
-    BOOST_REQUIRE_NO_THROW(octopOS::getInstance());
+    launch_octopOS();
     printf("\n\nStarting reboot\n\n");
     // spin up octopos
-    octopOS &ocotpos = octopOS::getInstance();
+    BOOST_REQUIRE_NO_THROW(octopOS::getInstance());
     MemKey current_key = MSGKEY;
+    printf("Key: %x\n", current_key);
     publisher<std::string> downgrade_pub(DOWNGRADE_TOPIC, current_key++);
+    printf("\n\nAfter\n\n");
     subscriber<std::string> downgrade_sub(DOWNGRADE_TOPIC, current_key - 1);
 
     const FilePath path = "./modules";
@@ -219,7 +230,6 @@ void* run_babysit_forever(void *modules) {
 BOOST_AUTO_TEST_CASE(babysit_forever_test) {
     BOOST_REQUIRE_NO_THROW(octopOS::getInstance());
     printf("\n\nStarting babysit\n\n");
-    octopOS &ocotpos = octopOS::getInstance();
     MemKey current_key = MSGKEY;
     publisher<std::string> downgrade_pub(DOWNGRADE_TOPIC, current_key++);
     subscriber<std::string> downgrade_sub(DOWNGRADE_TOPIC, current_key - 1);
@@ -275,3 +285,5 @@ BOOST_AUTO_TEST_CASE(babysit_forever_test) {
     BOOST_REQUIRE(!downgrade_sub.data_available());
     BOOST_REQUIRE(m1.early_death_count == 0);
 }
+
+BOOST_AUTO_TEST_SUITE_END()

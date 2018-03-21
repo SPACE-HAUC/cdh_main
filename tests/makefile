@@ -1,6 +1,7 @@
 test: octopOS_driver_test.cpp ../src/octopOS_driver.cpp \
 	../../OctopOS/src/octopos.cpp ../../OctopOS/src/subscriber.cpp \
-	../../OctopOS/src/tentacle.cpp ../../OctopOS/src/utility.cpp
+	../../OctopOS/src/tentacle.cpp ../../OctopOS/src/utility.cpp \
+	../include/*.h*
 	g++ -g -rdynamic -std=c++11 octopOS_driver_test.cpp ../src/octopOS_driver.cpp \
 	../../OctopOS/src/octopos.cpp ../../OctopOS/src/subscriber.cpp \
 	../../OctopOS/src/tentacle.cpp ../../OctopOS/src/utility.cpp \
