@@ -32,6 +32,7 @@ const char*  DOWNGRADE_TOPIC = "module_downgrade";
 const time_t RUNTIME_CUTOFF_DOWNGRADE_S = 60;
 const int    DEATH_COUNT_CUTOFF_DOWNGRADE = 5;
 const bool   LISTEN_FOR_MODULE_UPGRADES = true;
+const int    OCTOPOS_INTERNAL_TENTACLE_INDEX = 0;
 
 std::queue<pid_t> ChildHandler::rebootQ;
 ModuleInfo *ChildHandler::modules;
@@ -123,7 +124,8 @@ LaunchInfo launch_modules_in(FilePath dir, MemKey start_key) {
     pid_t pid;
     for (FilePath module : modules_in(dir)) {
 	pid_t pid = launch(module, current_key);
-	modules[module] = Module(pid, current_key - MSGKEY, time(0));
+	// Tentacle IDs for children start at 1 because 0 is for octopOS
+	modules[module] = Module(pid, current_key - MSGKEY + 1, time(0));
 	launch_octopOS_listener_for_child(modules[module].tentacle_id);
 	current_key++;
     }
@@ -133,14 +135,9 @@ LaunchInfo launch_modules_in(FilePath dir, MemKey start_key) {
 bool launch_octopOS_listeners() {
     pthread_t sub_thread;
 
-    // Apparently wait_for_data doesn't need any arguments?
-    // int *sharedQ;
-    // if ((sharedQ = (int*)malloc(sizeof(MSGKEY))) == NULL) {
-    // 	return false;
-    // }
-    // *sharedQ = MSGKEY;
-
-    return !pthread_create(&sub_thread, NULL,
+    // Wait for data doesn't need an argument
+    return launch_octopOS_listener_for_child(OCTOPOS_INTERNAL_TENTACLE_INDEX) &&
+	   !pthread_create(&sub_thread, NULL,
 			   subscriber_manager::wait_for_data, NULL);
 }
 
