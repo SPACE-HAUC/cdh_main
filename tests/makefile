@@ -9,3 +9,6 @@ test: octopOS_driver_test.cpp ../src/octopOS_driver.cpp \
 
 runtest: test
 	./test --catch_system_errors=no
+
+clean:
+	rm -f ./test

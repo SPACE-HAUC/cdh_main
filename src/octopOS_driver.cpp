@@ -29,15 +29,23 @@
 const char*  CONFIG_PATH = "/etc/octopOS/config.json";
 const char*  UPGRADE_TOPIC = "module_upgrade";
 const char*  DOWNGRADE_TOPIC = "module_downgrade";
-const time_t RUNTIME_CUTOFF_DOWNGRADE_S = 60;
+const time_t RUNTIME_CUTOFF_DOWNGRADE_S = 600; // tmp switch back to reasonable
 const int    DEATH_COUNT_CUTOFF_DOWNGRADE = 5;
 const bool   LISTEN_FOR_MODULE_UPGRADES = true;
 const int    OCTOPOS_INTERNAL_TENTACLE_INDEX = 0;
 
+int ChildHandler::reboot_count = 0; // tmp
 std::queue<pid_t> ChildHandler::rebootQ;
 ModuleInfo *ChildHandler::modules;
-publisher<std::string> *ChildHandler::downgrade_pub;
+publisher<OctoString> *ChildHandler::downgrade_pub;
 
+
+int memkey_to_tentacle_index(MemKey key) {
+    return key - MSGKEY + 1;
+}
+int tentacle_index_to_memkey(int index) {
+    return index + MSGKEY - 1;
+}
 
 Optional<json> load(FilePath json_file) {
     if (accessible(json_file)) {
@@ -99,12 +107,12 @@ pid_t launch(FilePath module, MemKey key) {
 void relaunch(Module &module, FilePath path) {
     module.killed = false;
     module.downgrade_requested = false;
-    module.pid = launch(path, module.tentacle_id);
+    module.pid = launch(path, tentacle_index_to_memkey(module.tentacle_id));
     module.launch_time = time(0);
 }
 
 bool launch_octopOS_listener_for_child(int tentacle_index) {
-    int tmp;
+    pthread_t thread;
     // tentacle_ID should be a somewhat persistent pointer, because
     // pthread_create casts it to a int* and then derefs it to get the
     // value
@@ -113,19 +121,18 @@ bool launch_octopOS_listener_for_child(int tentacle_index) {
       return false;
     }
     *idxptr = tentacle_index;
-    return !pthread_create((pthread_t*)&tmp, NULL, octopOS::listen_for_child,
-			   idxptr);
+    return !pthread_create(&thread, NULL, octopOS::listen_for_child, idxptr);
 }
 
 LaunchInfo launch_modules_in(FilePath dir, MemKey start_key) {
     ModuleInfo modules;
-    std::cout << "Launch: current key = " << start_key << std::endl; // tmp
     MemKey current_key = start_key;
     pid_t pid;
     for (FilePath module : modules_in(dir)) {
 	pid_t pid = launch(module, current_key);
 	// Tentacle IDs for children start at 1 because 0 is for octopOS
-	modules[module] = Module(pid, current_key - MSGKEY + 1, time(0));
+	modules[module] = Module(pid, memkey_to_tentacle_index(current_key),
+				 time(0));
 	launch_octopOS_listener_for_child(modules[module].tentacle_id);
 	current_key++;
     }
@@ -182,13 +189,15 @@ bool module_needs_downgrade(Module *module) {
     return died_quickly && died_too_many_times;
 }
 
-void downgrade(FilePath module_name, publisher<std::string> &downgrade_pub) {
+void downgrade(FilePath module_name, publisher<OctoString> &downgrade_pub) {
+    std::cout << "Publishing module [" << module_name << "] to downgrade pub!"
+	      << std::endl; // tmp
     downgrade_pub.publish(module_name);
 }
 
 // Modifies MODULES[PATH]
 void reboot_module(std::string path, ModuleInfo *modules,
-		   publisher<std::string> &downgrade_pub) {
+		   publisher<OctoString> &downgrade_pub) {
     Module &module = (*modules)[path];
     if (module.killed || !module_needs_downgrade(&module)) {
 	// Death was intentional or unsuspicious
@@ -217,12 +226,12 @@ Optional<std::string> find_module_with(pid_t pid, const ModuleInfo &modules) {
 // Watch over children, rebooting and upgrading modules
 void babysit_forever(ModuleInfo &modules) {
     auto upgrade_module = modules[UPGRADE_TOPIC];
-    publisher<std::string> downgrade_pub(DOWNGRADE_TOPIC,
-					 upgrade_module.tentacle_id);
+    publisher<OctoString> downgrade_pub(DOWNGRADE_TOPIC,
+					upgrade_module.tentacle_id);
     ChildHandler::register_child_handler(&modules, &downgrade_pub);
 
-    subscriber<std::string> upgrade_sub(UPGRADE_TOPIC,
-					upgrade_module.tentacle_id);
+    subscriber<OctoString> upgrade_sub(UPGRADE_TOPIC,
+				       upgrade_module.tentacle_id);
 
     while (1) {
 	// reboot any dead modules
@@ -242,13 +251,18 @@ void babysit_forever(ModuleInfo &modules) {
 }
 
 octopOS& launch_octopOS() {
+    std::cout << "start of launch_octopOS" << std::endl;
     octopOS &octopos = octopOS::getInstance();
+    std::cout << "after getting octopOS" << std::endl;
+
+    sleep(2);
 
     if (!launch_octopOS_listeners()) {
 	std::cerr << "Critical Error: Unable to spawn OctopOS listener threads."
 		  << " Exiting..." << std::endl;
 	exit(2);
     }
+    std::cout << "after launching" << std::endl;
 
     return octopos;
 }

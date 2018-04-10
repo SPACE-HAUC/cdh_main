@@ -49,9 +49,10 @@ LaunchInfo launch_modules_in(FilePath dir, MemKey start_key);
 std::list<FilePath> modules_in(FilePath dir);
 Optional< std::list<FilePath> > files_in(FilePath dir);
 bool launch_octopOS_listeners();
+bool launch_octopOS_listener_for_child(int tentacle_index);
 Optional<std::string> find_module_with(pid_t pid, const ModuleInfo &modules);
 void reboot_module(std::string path, ModuleInfo *modules,
-		   publisher<std::string> &downgrade_pub);
+		   publisher<OctoString> &downgrade_pub);
 int kill_module(std::string path, ModuleInfo *modules);
 bool module_needs_downgrade(Module *module);
 void babysit_forever(ModuleInfo &modules);
@@ -66,26 +67,34 @@ public:
 	int status;
 	pthread_t tmp;
 
+	std::cout << "A child died!" << std::endl;
+
 	while ((pid = waitpid(-1, &status, WNOHANG)) != -1) {
 	    // handle all dead children later
 	    rebootQ.push(pid);
 	}
     }
 
-    static void register_child_handler(ModuleInfo *_modules,
-				       publisher<std::string> *_downgrade_pub) {
+    static bool register_child_handler(ModuleInfo *_modules,
+				       publisher<OctoString> *_downgrade_pub) {
 	modules = _modules;
 	downgrade_pub = _downgrade_pub;
 	struct sigaction sa;
 
-	memset(&sa, 0, sizeof(sa));
 	sa.sa_handler = sigchld_handler;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = SA_RESTART | SA_NOCLDSTOP;
 
-	sigaction(SIGCHLD, &sa, NULL);
+	bool success = sigaction(SIGCHLD, &sa, NULL) != -1;
+	if(!success) {
+	    printf("Failed to set child handler\n"); // tmp
+	}
+	return success;
     }
 
     static void reboot_dead_modules() {
 	while(!rebootQ.empty()) {
+	    reboot_count++;
 	    pid_t pid = rebootQ.front();
 	    rebootQ.pop();
 	    Optional<std::string> found = find_module_with(pid, *modules);
@@ -98,10 +107,11 @@ public:
 	    }
 	}
     }
+    static int reboot_count; // tmp
 
 private:
     static ModuleInfo *modules;
-    static publisher<std::string> *downgrade_pub;
+    static publisher<OctoString> *downgrade_pub;
     static std::queue<pid_t> rebootQ;
 };
 
