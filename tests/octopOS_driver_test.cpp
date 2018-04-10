@@ -191,9 +191,11 @@ BOOST_AUTO_TEST_CASE(reboot_module_test) {
     Module &m1 = modules[module1];
     pid_t oldpid = m1.pid;
     sleep(1);
+    std::cout << "Killing pid " << m1.pid << std::endl;
     BOOST_REQUIRE(kill(m1.pid, SIGTERM) == 0);
     reboot_module(module1, &modules, downgrade_pub);
     m1 = modules[module1]; // the Module has changed
+    std::cout << "Rebooted pid is " << m1.pid << std::endl;
     BOOST_REQUIRE(m1.pid != oldpid);
     BOOST_REQUIRE(m1.pid > 1);
     BOOST_REQUIRE(!m1.killed);
@@ -208,10 +210,12 @@ BOOST_AUTO_TEST_CASE(reboot_module_test) {
     // died too many times
     oldpid = m1.pid;
     m1.early_death_count = 200;
+    std::cout << "Killing pid " << m1.pid << std::endl;
     BOOST_REQUIRE(kill(m1.pid, SIGTERM) != -1);
     sleep(1);
     reboot_module(module1, &modules, downgrade_pub);
     m1 = modules[module1]; // the Module has changed
+    std::cout << "Rebooted pid is " << m1.pid << std::endl;
     // pid shouldn't have changed because we shouldn't have relaunched it
     BOOST_REQUIRE(m1.pid == oldpid);
     BOOST_REQUIRE(!m1.killed);
@@ -220,26 +224,28 @@ BOOST_AUTO_TEST_CASE(reboot_module_test) {
     BOOST_REQUIRE(downgrade_sub.data_available());
     BOOST_REQUIRE(downgrade_sub.get_data().get() == module1);
     BOOST_REQUIRE(m1.early_death_count == 0);
-    std::cout << "Past second" << std::endl;
 
     sleep(1);
     // now reboot on a module that shouldn't be downgraded because it
     // was killed intentionally
-    std::cout << "mid second 1" << std::endl;
     const FilePath module2 = path + "/test_module2";
-    std::cout << "mid second 2" << std::endl;
     Module &m2 = modules[module2];
     oldpid = m2.pid;
+    std::cout << "Killing pid " << m2.pid << std::endl;
     BOOST_REQUIRE(kill_module(module2, &modules) != -1);
     BOOST_REQUIRE(m2.killed);
-    std::cout << "mid second 3" << std::endl;
     reboot_module(module2, &modules, downgrade_pub);
     m2 = modules[module2]; // the Module has changed
+    std::cout << "Rebooted pid is " << m2.pid << std::endl;
     BOOST_REQUIRE(m2.pid != oldpid);
     BOOST_REQUIRE(m2.pid > 1);
     BOOST_REQUIRE(!m2.downgrade_requested);
     BOOST_REQUIRE(!downgrade_sub.data_available());
     BOOST_REQUIRE(m2.early_death_count == 0);
+    sleep(2); // wait long enough for the child to run a bit
+    std::cout << "Killing pid " << m2.pid << std::endl;
+    BOOST_REQUIRE(kill(m2.pid, SIGTERM) != -1);
+    std::cout << "Done" << std::endl;
 }
 
 // void* run_babysit_forever(void *modules) {
