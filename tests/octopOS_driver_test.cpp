@@ -162,99 +162,10 @@
 //     printf("\n\nFinished launch_in\n\n");
 // }
 
-BOOST_AUTO_TEST_CASE(reboot_module_test) {
-    printf("\n\nStarting reboot\n\n");
-    // octopOS &octopos = launch_octopOS();
-    // spin up octopos
-
-    // ----- HERE BE DRAGONS! DO NOT TOUCH! -----
-    BOOST_REQUIRE_NO_THROW(octopOS::getInstance());
-    MemKey current_key = MSGKEY;
-
-    pthread_t subscriber_manager_thread;
-    BOOST_REQUIRE(pthread_create(&subscriber_manager_thread, NULL,
-				 subscriber_manager::wait_for_data, NULL) == 0);
-    BOOST_REQUIRE(launch_octopOS_listener_for_child(0));
-    // try  making these publish string ptrs
-    publisher<OctoString> downgrade_pub(DOWNGRADE_TOPIC, current_key++);
-    printf("\n\nAfter\n\n");
-    subscriber<OctoString> downgrade_sub(DOWNGRADE_TOPIC, current_key - 1);
-    // ----------
-
-    const FilePath path = "./modules";
-    LaunchInfo info = launch_modules_in(path, current_key);
-    ModuleInfo modules = info.first;
-
-    // first reboot on a module that shouldn't be downgraded because
-    // it hasn't died enough times
-    const FilePath module1 = path + "/test_module";
-    Module &m1 = modules[module1];
-    pid_t oldpid = m1.pid;
-    sleep(1);
-    std::cout << "Killing pid " << m1.pid << std::endl;
-    BOOST_REQUIRE(kill(m1.pid, SIGTERM) == 0);
-    reboot_module(module1, &modules, downgrade_pub);
-    m1 = modules[module1]; // the Module has changed
-    std::cout << "Rebooted pid is " << m1.pid << std::endl;
-    BOOST_REQUIRE(m1.pid != oldpid);
-    BOOST_REQUIRE(m1.pid > 1);
-    BOOST_REQUIRE(!m1.killed);
-    BOOST_REQUIRE(!m1.downgrade_requested);
-    sleep(1);
-    BOOST_REQUIRE(!downgrade_sub.data_available());
-    BOOST_REQUIRE(m1.early_death_count == 1);
-    std::cout << "Past first" << std::endl;
-
-    sleep(1);
-    // now reboot on a module that SHOULD be downgraded because it has
-    // died too many times
-    oldpid = m1.pid;
-    m1.early_death_count = 200;
-    std::cout << "Killing pid " << m1.pid << std::endl;
-    BOOST_REQUIRE(kill(m1.pid, SIGTERM) != -1);
-    sleep(1);
-    reboot_module(module1, &modules, downgrade_pub);
-    m1 = modules[module1]; // the Module has changed
-    std::cout << "Rebooted pid is " << m1.pid << std::endl;
-    // pid shouldn't have changed because we shouldn't have relaunched it
-    BOOST_REQUIRE(m1.pid == oldpid);
-    BOOST_REQUIRE(!m1.killed);
-    BOOST_REQUIRE(m1.downgrade_requested);
-    sleep(1);
-    BOOST_REQUIRE(downgrade_sub.data_available());
-    BOOST_REQUIRE(downgrade_sub.get_data().get() == module1);
-    BOOST_REQUIRE(m1.early_death_count == 0);
-
-    sleep(1);
-    // now reboot on a module that shouldn't be downgraded because it
-    // was killed intentionally
-    const FilePath module2 = path + "/test_module2";
-    Module &m2 = modules[module2];
-    oldpid = m2.pid;
-    std::cout << "Killing pid " << m2.pid << std::endl;
-    BOOST_REQUIRE(kill_module(module2, &modules) != -1);
-    BOOST_REQUIRE(m2.killed);
-    reboot_module(module2, &modules, downgrade_pub);
-    m2 = modules[module2]; // the Module has changed
-    std::cout << "Rebooted pid is " << m2.pid << std::endl;
-    BOOST_REQUIRE(m2.pid != oldpid);
-    BOOST_REQUIRE(m2.pid > 1);
-    BOOST_REQUIRE(!m2.downgrade_requested);
-    BOOST_REQUIRE(!downgrade_sub.data_available());
-    BOOST_REQUIRE(m2.early_death_count == 0);
-    sleep(2); // wait long enough for the child to run a bit
-    std::cout << "Killing pid " << m2.pid << std::endl;
-    BOOST_REQUIRE(kill(m2.pid, SIGTERM) != -1);
-    std::cout << "Done" << std::endl;
-}
-
-// void* run_babysit_forever(void *modules) {
-//     babysit_forever(*(ModuleInfo*)modules);
-//     return NULL;
-// }
-
-// BOOST_AUTO_TEST_CASE(babysit_forever_test) {
-//     printf("\n\nStarting babysit\n\n");
+// BOOST_AUTO_TEST_CASE(reboot_module_test) {
+//     printf("\n\nStarting reboot\n\n");
+//     // octopOS &octopos = launch_octopOS();
+//     // spin up octopos
 
 //     // ----- HERE BE DRAGONS! DO NOT TOUCH! -----
 //     BOOST_REQUIRE_NO_THROW(octopOS::getInstance());
@@ -274,39 +185,42 @@ BOOST_AUTO_TEST_CASE(reboot_module_test) {
 //     LaunchInfo info = launch_modules_in(path, current_key);
 //     ModuleInfo modules = info.first;
 
-//     pthread_t babysit_thread;
-//     BOOST_REQUIRE(!pthread_create(&babysit_thread, NULL,
-// 				  run_babysit_forever, (void*)(&modules)));
-
 //     // first reboot on a module that shouldn't be downgraded because
 //     // it hasn't died enough times
 //     const FilePath module1 = path + "/test_module";
-//     Module m1 = modules[module1];
+//     Module &m1 = modules[module1];
 //     pid_t oldpid = m1.pid;
 //     sleep(1);
-//     std::cout << "Killing pid = " << m1.pid << std::endl;
-//     BOOST_REQUIRE(kill(m1.pid, SIGTERM) != -1);
-//     std::cout << "Done killing pid" << std::endl;
-//     sleep(1);
-//     std::cout << "reboot: " << ChildHandler::reboot_count << std::endl;
+//     std::cout << "Killing pid " << m1.pid << std::endl;
+//     BOOST_REQUIRE(kill(m1.pid, SIGTERM) == 0);
+//     reboot_module(module1, &modules, downgrade_pub);
+//     m1 = modules[module1]; // the Module has changed
+//     std::cout << "Rebooted pid is " << m1.pid << std::endl;
 //     BOOST_REQUIRE(m1.pid != oldpid);
 //     BOOST_REQUIRE(m1.pid > 1);
 //     BOOST_REQUIRE(!m1.killed);
 //     BOOST_REQUIRE(!m1.downgrade_requested);
+//     sleep(1);
 //     BOOST_REQUIRE(!downgrade_sub.data_available());
 //     BOOST_REQUIRE(m1.early_death_count == 1);
 //     std::cout << "Past first" << std::endl;
 
 //     sleep(1);
+//     // now reboot on a module that SHOULD be downgraded because it has
+//     // died too many times
 //     oldpid = m1.pid;
 //     m1.early_death_count = 200;
-//     std::cout << "Killing pid = " << m1.pid << std::endl;
+//     std::cout << "Killing pid " << m1.pid << std::endl;
 //     BOOST_REQUIRE(kill(m1.pid, SIGTERM) != -1);
-//     std::cout << "Done killing pid" << std::endl;
 //     sleep(1);
+//     reboot_module(module1, &modules, downgrade_pub);
+//     m1 = modules[module1]; // the Module has changed
+//     std::cout << "Rebooted pid is " << m1.pid << std::endl;
+//     // pid shouldn't have changed because we shouldn't have relaunched it
 //     BOOST_REQUIRE(m1.pid == oldpid);
 //     BOOST_REQUIRE(!m1.killed);
 //     BOOST_REQUIRE(m1.downgrade_requested);
+//     sleep(1);
 //     BOOST_REQUIRE(downgrade_sub.data_available());
 //     BOOST_REQUIRE(downgrade_sub.get_data().get() == module1);
 //     BOOST_REQUIRE(m1.early_death_count == 0);
@@ -314,19 +228,123 @@ BOOST_AUTO_TEST_CASE(reboot_module_test) {
 //     sleep(1);
 //     // now reboot on a module that shouldn't be downgraded because it
 //     // was killed intentionally
-//     std::cout << "mid second 2" << std::endl;
 //     const FilePath module2 = path + "/test_module2";
-//     Module m2 = modules[module2];
+//     Module &m2 = modules[module2];
 //     oldpid = m2.pid;
+//     std::cout << "Killing pid " << m2.pid << std::endl;
 //     BOOST_REQUIRE(kill_module(module2, &modules) != -1);
 //     BOOST_REQUIRE(m2.killed);
-//     std::cout << "mid second 3" << std::endl;
-//     sleep(1);
+//     reboot_module(module2, &modules, downgrade_pub);
+//     m2 = modules[module2]; // the Module has changed
+//     std::cout << "Rebooted pid is " << m2.pid << std::endl;
 //     BOOST_REQUIRE(m2.pid != oldpid);
 //     BOOST_REQUIRE(m2.pid > 1);
 //     BOOST_REQUIRE(!m2.downgrade_requested);
 //     BOOST_REQUIRE(!downgrade_sub.data_available());
 //     BOOST_REQUIRE(m2.early_death_count == 0);
+//     sleep(2); // wait long enough for the child to run a bit
+//     std::cout << "Killing pid " << m2.pid << std::endl;
+//     BOOST_REQUIRE(kill(m2.pid, SIGTERM) != -1);
+//     std::cout << "Done" << std::endl;
 // }
+
+void* run_babysit_forever(void *modules) {
+    babysit_forever(*(ModuleInfo*)modules);
+    return NULL;
+}
+
+BOOST_AUTO_TEST_CASE(babysit_forever_test) {
+    printf("\n\nStarting babysit\n\n");
+
+    // ----- HERE BE DRAGONS! DO NOT TOUCH! -----
+    BOOST_REQUIRE_NO_THROW(octopOS::getInstance());
+    MemKey current_key = MSGKEY;
+
+    pthread_t subscriber_manager_thread;
+    BOOST_REQUIRE(pthread_create(&subscriber_manager_thread, NULL,
+				 subscriber_manager::wait_for_data, NULL) == 0);
+    BOOST_REQUIRE(launch_octopOS_listener_for_child(0));
+    publisher<OctoString> downgrade_pub(DOWNGRADE_TOPIC, current_key++);
+    printf("\n\nAfter\n\n");
+    subscriber<OctoString> downgrade_sub(DOWNGRADE_TOPIC, current_key - 1);
+    // ----------
+
+    const FilePath path = "./modules";
+    LaunchInfo info = launch_modules_in(path, current_key);
+    ModuleInfo modules = info.first;
+
+    pthread_t babysit_thread;
+    BOOST_REQUIRE(!pthread_create(&babysit_thread, NULL,
+				  run_babysit_forever, (void*)(&modules)));
+
+    // first reboot on a module that shouldn't be downgraded because
+    // it hasn't died enough times
+    const FilePath module1 = path + "/test_module";
+    Module m1 = modules[module1];
+    pid_t oldpid = m1.pid;
+    sleep(1);
+    sleep(1);
+    sleep(1);
+    sleep(1);
+    std::cout << "Killing pid = " << m1.pid << std::endl;
+    BOOST_REQUIRE(kill(m1.pid, SIGTERM) != -1);
+    std::cout << "Done killing pid" << std::endl;
+    sleep(1);
+    sleep(1);
+    sleep(1);
+    sleep(1);
+    std::cout << "reboot: " << ChildHandler::reboot_count << std::endl;
+    BOOST_REQUIRE(m1.pid != oldpid);
+    BOOST_REQUIRE(m1.pid > 1);
+    BOOST_REQUIRE(!m1.killed);
+    BOOST_REQUIRE(!m1.downgrade_requested);
+    BOOST_REQUIRE(!downgrade_sub.data_available());
+    BOOST_REQUIRE(m1.early_death_count == 1);
+    std::cout << "Past first" << std::endl;
+
+    sleep(1);
+    sleep(1);
+    sleep(1);
+    sleep(1);
+    oldpid = m1.pid;
+    m1.early_death_count = 200;
+    std::cout << "Killing pid = " << m1.pid << std::endl;
+    BOOST_REQUIRE(kill(m1.pid, SIGTERM) != -1);
+    std::cout << "Done killing pid" << std::endl;
+    
+    sleep(1);
+    sleep(1);
+    sleep(1);
+    sleep(1);
+    BOOST_REQUIRE(m1.pid == oldpid);
+    BOOST_REQUIRE(!m1.killed);
+    BOOST_REQUIRE(m1.downgrade_requested);
+    BOOST_REQUIRE(downgrade_sub.data_available());
+    BOOST_REQUIRE(downgrade_sub.get_data().get() == module1);
+    BOOST_REQUIRE(m1.early_death_count == 0);
+
+    sleep(1);
+    sleep(1);
+    sleep(1);
+    sleep(1);
+    // now reboot on a module that shouldn't be downgraded because it
+    // was killed intentionally
+    std::cout << "mid second 2" << std::endl;
+    const FilePath module2 = path + "/test_module2";
+    Module m2 = modules[module2];
+    oldpid = m2.pid;
+    BOOST_REQUIRE(kill_module(module2, &modules) != -1);
+    BOOST_REQUIRE(m2.killed);
+    std::cout << "mid second 3" << std::endl;
+    sleep(1);
+    sleep(1);
+    sleep(1);
+    sleep(1);
+    BOOST_REQUIRE(m2.pid != oldpid);
+    BOOST_REQUIRE(m2.pid > 1);
+    BOOST_REQUIRE(!m2.downgrade_requested);
+    BOOST_REQUIRE(!downgrade_sub.data_available());
+    BOOST_REQUIRE(m2.early_death_count == 0);
+}
 
 // BOOST_AUTO_TEST_SUITE_END()
