@@ -1,3 +1,15 @@
+// Copyright 2017 Space HAUC Command and Data Handling
+// This file is part of Space HAUC which is released under AGPLv3.
+// See file LICENSE.txt or go to <http://www.gnu.org/licenses/> for full
+// license details.
+
+/*!
+ * @file
+ *
+ * @brief Test for reboot module.
+ * These tests are in seperate files to avoid strange boost scoping.
+ */
+
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE octopOS_driver
 // Child deaths are not an error
@@ -35,8 +47,8 @@ BOOST_AUTO_TEST_CASE(reboot_module_test) {
     pid_t oldpid = m1.pid;
     sleep(1);
     BOOST_REQUIRE(kill(m1.pid, SIGTERM) == 0);
-    reboot_module(module1, &modules, downgrade_pub);
-    m1 = modules[module1]; // the Module has changed
+    reboot_module(module1, &modules, &downgrade_pub);
+    m1 = modules[module1];  // the Module has changed
     BOOST_REQUIRE(m1.pid != oldpid);
     BOOST_REQUIRE(m1.pid > 1);
     BOOST_REQUIRE(!m1.killed);
@@ -52,8 +64,8 @@ BOOST_AUTO_TEST_CASE(reboot_module_test) {
     m1.early_death_count = 200;
     BOOST_REQUIRE(kill(m1.pid, SIGTERM) != -1);
     sleep(1);
-    reboot_module(module1, &modules, downgrade_pub);
-    m1 = modules[module1]; // the Module has changed
+    reboot_module(module1, &modules, &downgrade_pub);
+    m1 = modules[module1];  // the Module has changed
     // pid shouldn't have changed because we shouldn't have relaunched it
     BOOST_REQUIRE(m1.pid == oldpid);
     BOOST_REQUIRE(!m1.killed);
@@ -71,13 +83,13 @@ BOOST_AUTO_TEST_CASE(reboot_module_test) {
     oldpid = m2.pid;
     BOOST_REQUIRE(kill_module(module2, &modules) != -1);
     BOOST_REQUIRE(m2.killed);
-    reboot_module(module2, &modules, downgrade_pub);
-    m2 = modules[module2]; // the Module has changed
+    reboot_module(module2, &modules, &downgrade_pub);
+    m2 = modules[module2];  // the Module has changed
     BOOST_REQUIRE(m2.pid != oldpid);
     BOOST_REQUIRE(m2.pid > 1);
     BOOST_REQUIRE(!m2.downgrade_requested);
     BOOST_REQUIRE(!downgrade_sub.data_available());
     BOOST_REQUIRE(m2.early_death_count == 0);
-    sleep(2); // wait long enough for the child to run a bit
+    sleep(2);  // wait long enough for the child to run a bit
     BOOST_REQUIRE(kill(m2.pid, SIGTERM) != -1);
 }

@@ -110,7 +110,7 @@ pid_t launch(FilePath module, MemKey key);
  * @param module Reference to the module to relaunch, *which will be mutated*.
  * @param path The path of the module executable.
  */
-void relaunch(Module &module, FilePath path);
+void relaunch(Module *module, FilePath path);
 
 /**
  * @brief Launch all of the modules in the given directory, starting
@@ -179,7 +179,7 @@ Optional<std::string> find_module_with(pid_t pid, const ModuleInfo &modules);
  * @param downgrade_pub The publisher for downgrade requests.
  */
 void reboot_module(std::string path, ModuleInfo *modules,
-                   publisher<OctoString> &downgrade_pub);
+                   publisher<OctoString> *downgrade_pub);
 
 /**
  * @brief Kill the module with the given executable path.
@@ -192,7 +192,8 @@ void reboot_module(std::string path, ModuleInfo *modules,
 int kill_module(std::string path, ModuleInfo *modules);
 
 /**
- * @brief Does the given module need a downgrade?
+ * @brief Does the given module need a downgrade? Note that *the given
+ * module may be mutated to record early deaths.*
  *
  * @param module
  * @return Does the given module need a downgrade?
@@ -207,9 +208,9 @@ bool module_needs_downgrade(Module *module);
  * @param downgrade_pub The publisher for downgrade requests.
  * @param upgrade_sub The subsriber for upgrade requests.
  */
-void babysit_forever(ModuleInfo &modules,
-                     publisher<OctoString> &downgrade_pub,
-                     subscriber<OctoString> &upgrade_sub);
+void babysit_forever(ModuleInfo *modules,
+                     publisher<OctoString> *downgrade_pub,
+                     subscriber<OctoString> *upgrade_sub);
 
 /**
  * @brief Launch OctopOS.

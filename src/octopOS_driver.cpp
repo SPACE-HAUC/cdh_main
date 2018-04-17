@@ -18,6 +18,8 @@
 #include <dirent.h>
 #include <list>
 #include <fstream>
+#include <utility>
+#include <string>
 
 #include <octopOS/octopos.h>
 #include <octopOS/subscriber.h>
@@ -67,10 +69,10 @@ Optional< std::list<FilePath> > files_in(FilePath directory) {
         return None<std::list<FilePath>>();
     } else {
         std::list<FilePath> files;
-        while (ent = readdir(dir)){
+        while (ent = readdir(dir)) {
             std::string file = ent->d_name;
             // Don't add "." and ".."
-            if(file != "." && file != "..") {
+            if (file != "." && file != "..") {
                 files.push_front(directory + "/" + file);
             }
         }
@@ -83,25 +85,25 @@ Optional< std::list<FilePath> > files_in(FilePath directory) {
 // launches the given module in a new child process
 pid_t launch(FilePath module, MemKey key) {
     pid_t pid;
-    switch(pid = fork()) {
+    switch (pid = fork()) {
     case -1:
         perror("Fork failed in attempting to launch module.");
         break;
-    case 0: // child
-        execl(module.c_str(), std::to_string(key).c_str(), (char*)0);
+    case 0:  // child
+        execl(module.c_str(), std::to_string(key).c_str(), (char*)0);  // NOLINT
         exit(0);
-    default: // parent
+    default:  // parent
         break;
     }
     return pid;
 }
 
 // Modifies MODULE
-void relaunch(Module &module, FilePath path) {
-    module.killed = false;
-    module.downgrade_requested = false;
-    module.pid = launch(path, tentacle_index_to_memkey(module.tentacle_id));
-    module.launch_time = time(0);
+void relaunch(Module *module, FilePath path) {
+    module->killed = false;
+    module->downgrade_requested = false;
+    module->pid = launch(path, tentacle_index_to_memkey(module->tentacle_id));
+    module->launch_time = time(0);
 }
 
 bool launch_octopOS_listener_for_child(int tentacle_index) {
@@ -110,7 +112,7 @@ bool launch_octopOS_listener_for_child(int tentacle_index) {
     // pthread_create casts it to a int* and then derefs it to get the
     // value
     MemKey *idxptr = NULL;
-    if((idxptr = (MemKey*)malloc(sizeof(MemKey))) == NULL) {
+    if ((idxptr = (MemKey*)malloc(sizeof(MemKey))) == NULL) { // NOLINT
       return false;
     }
     *idxptr = tentacle_index;
@@ -182,17 +184,17 @@ bool module_needs_downgrade(Module *module) {
     return died_quickly && died_too_many_times;
 }
 
-void downgrade(FilePath module_name, publisher<OctoString> &downgrade_pub) {
-    downgrade_pub.publish(module_name);
+void downgrade(FilePath module_name, publisher<OctoString> *downgrade_pub) {
+    downgrade_pub->publish(module_name);
 }
 
 // Modifies MODULES[PATH]
 void reboot_module(std::string path, ModuleInfo *modules,
-                   publisher<OctoString> &downgrade_pub) {
+                   publisher<OctoString> *downgrade_pub) {
     Module &module = (*modules)[path];
     if (module.killed || !module_needs_downgrade(&module)) {
         // Death was intentional or unsuspicious
-        relaunch(module, path);
+        relaunch(&module, path);
     } else {
         // Death warrants downgrade
         module.downgrade_requested = true;
@@ -203,10 +205,11 @@ void reboot_module(std::string path, ModuleInfo *modules,
 }
 
 Optional<std::string> find_module_with(pid_t pid, const ModuleInfo &modules) {
-    auto moduleIt = std::find_if(modules.begin(), modules.end(),
-                                 [&](const std::pair<std::string, Module> el) {
-                                     return el.second.pid == pid;
-                                 });
+    auto moduleIt =
+        std::find_if(modules.begin(), modules.end(),
+                     [&pid](const std::pair<std::string, Module> el) {
+                         return el.second.pid == pid;
+                     });
     if (moduleIt == modules.end()) {
         return None<std::string>();
     } else {
@@ -215,21 +218,21 @@ Optional<std::string> find_module_with(pid_t pid, const ModuleInfo &modules) {
 }
 
 // Watch over children, rebooting and upgrading modules
-void babysit_forever(ModuleInfo &modules,
-                     publisher<OctoString> &downgrade_pub,
-                     subscriber<OctoString> &upgrade_sub) {
+void babysit_forever(ModuleInfo *modules,
+                     publisher<OctoString> *downgrade_pub,
+                     subscriber<OctoString> *upgrade_sub) {
     while (1) {
         // reboot any dead modules
-        reboot_dead_modules(&modules, &downgrade_pub);
+        reboot_dead_modules(modules, downgrade_pub);
 
         // check for upgrade data
-        if(upgrade_sub.data_available()) {
-            std::string module_path = upgrade_sub.get_data();
-            Module &module = modules[module_path];
+        if (upgrade_sub->data_available()) {
+            std::string module_path = upgrade_sub->get_data();
+            Module &module = (*modules)[module_path];
             if (module.downgrade_requested) {
-                relaunch(module, module_path);
+                relaunch(&module, module_path);
             } else {
-                kill_module(module_path, &modules);
+                kill_module(module_path, modules);
             }
         }
         usleep(10000);
@@ -251,7 +254,7 @@ octopOS& launch_octopOS() {
 void reboot_dead_modules(ModuleInfo *modules,
                          publisher<OctoString> *downgrade_pub) {
     pid_t pid;
-    while((pid = waitpid(-1, NULL, WNOHANG)) > 0) {
+    while ((pid = waitpid(-1, NULL, WNOHANG)) > 0) {
         Optional<std::string> found = find_module_with(pid, *modules);
         if (found.isEmpty()) {
             std::cerr << "Notification of unregistered module death "
@@ -259,7 +262,7 @@ void reboot_dead_modules(ModuleInfo *modules,
                       << "Something has probably gone horribly wrong."
                       << std::endl;
         } else {
-            reboot_module(found.get(), modules, *downgrade_pub);
+            reboot_module(found.get(), modules, downgrade_pub);
         }
     }
 }

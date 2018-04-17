@@ -1,3 +1,15 @@
+// Copyright 2017 Space HAUC Command and Data Handling
+// This file is part of Space HAUC which is released under AGPLv3.
+// See file LICENSE.txt or go to <http://www.gnu.org/licenses/> for full
+// license details.
+
+/*!
+ * @file
+ *
+ * @brief Test for babysit_forever
+ * These tests are in seperate files to avoid strange boost scoping.
+ */
+
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE octopOS_driver
 // Child deaths are not an error
@@ -19,7 +31,7 @@ struct babysitInfo {
 
 void* run_babysit_forever(void *modules) {
     struct babysitInfo bsi = *(struct babysitInfo*)modules;
-    babysit_forever(*bsi.modules, *bsi.downgrade_pub, *bsi.upgrade_sub);
+    babysit_forever(bsi.modules, bsi.downgrade_pub, bsi.upgrade_sub);
     return NULL;
 }
 
@@ -48,14 +60,14 @@ BOOST_AUTO_TEST_CASE(babysit_forever_test) {
     bsi.upgrade_sub = &upgrade_sub;
     pthread_t babysit_thread;
     BOOST_REQUIRE(!pthread_create(&babysit_thread, NULL,
-                                  run_babysit_forever, (void*)(&bsi)));
+                                  run_babysit_forever, (void*)(&bsi)));  // NOLINT
 
     // first reboot on a module that shouldn't be downgraded because
     // it hasn't died enough times
     const FilePath module1 = path + "/test_module";
     Module &m1 = modules[module1];
     pid_t oldpid = m1.pid;
-    sleep(1); // need multiple sleeps to give the reboot thread a ctx switch
+    sleep(1);  // need multiple sleeps to give the reboot thread a ctx switch
     sleep(1);
     BOOST_REQUIRE(kill(m1.pid, SIGTERM) != -1);
     sleep(1);

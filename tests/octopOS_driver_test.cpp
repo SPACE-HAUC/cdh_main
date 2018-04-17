@@ -1,9 +1,23 @@
+// Copyright 2017 Space HAUC Command and Data Handling
+// This file is part of Space HAUC which is released under AGPLv3.
+// See file LICENSE.txt or go to <http://www.gnu.org/licenses/> for full
+// license details.
+
+/*!
+ * @file
+ *
+ * @brief Test for OctopOS driver
+ * These tests are in seperate files to avoid strange boost scoping.
+ */
+
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE octopOS_driver
 // Child deaths are not an error
 #define BOOST_TEST_IGNORE_NON_ZERO_CHILD_CODE
 #define BOOST_TEST_IGNORE_SIGCHLD
 #include <boost/test/unit_test.hpp>
+#include <utility>
+#include <string>
 
 #include "../include/Optional.hpp"
 #include "../include/octopOS_driver.hpp"
@@ -59,16 +73,16 @@ BOOST_AUTO_TEST_CASE(files_in_test) {
     BOOST_REQUIRE(list.size() >= 1);
     // list should return full paths - not just filename
     std::string path = "../tests/";
-    for(FilePath f: list) {
+    for (FilePath f : list) {
       BOOST_REQUIRE(f.compare(0, path.size(), path) == 0);
     }
 }
 
 BOOST_AUTO_TEST_CASE(module_needs_downgrade_test) {
-    Module m1(111, 1, 1); // launched a looooong time ago
+    Module m1(111, 1, 1);  // launched a looooong time ago
     BOOST_REQUIRE(!module_needs_downgrade(&m1));
-    Module m2(111, 1, time(0)); // launched just now
-    m2.early_death_count = 10; // and died early 10 times in a row
+    Module m2(111, 1, time(0));  // launched just now
+    m2.early_death_count = 10;  // and died early 10 times in a row
     BOOST_REQUIRE(module_needs_downgrade(&m2));
 }
 
@@ -91,7 +105,7 @@ BOOST_AUTO_TEST_CASE(find_module_with_test) {
 BOOST_AUTO_TEST_CASE(relaunch_test) {
     BOOST_REQUIRE_NO_THROW(octopOS::getInstance());
     Module m(-1, 0, time(0));
-    relaunch(m, "./modules/test_module");
+    relaunch(&m, "./modules/test_module");
     BOOST_REQUIRE(m.pid > 1);
     BOOST_REQUIRE(!m.killed);
     BOOST_REQUIRE(!m.downgrade_requested);
@@ -131,7 +145,7 @@ BOOST_AUTO_TEST_CASE(launch_modules_in_test) {
     ModuleInfo modules = info.first;
     BOOST_REQUIRE(module_files.size() == modules.size());
     sleep(1);
-    for(std::pair<std::string, Module> m: modules) {
+    for (std::pair<std::string, Module> m : modules) {
         auto file = std::find(module_files.begin(),
                               module_files.end(),
                               m.first);
