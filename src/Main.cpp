@@ -15,8 +15,8 @@
 #include <octopOS/subscriber.h>
 #include <octopOS/publisher.h>
 
-#include "../include/Optional.hpp"
-#include "../include/octopOS_driver.hpp"
+#include "Optional.hpp"
+#include "octopOS_driver.hpp"
 
 int main(int argc, char const *argv[]) {
     octopOS &octopos = launch_octopOS();

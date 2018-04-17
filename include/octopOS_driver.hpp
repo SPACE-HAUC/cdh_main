@@ -13,10 +13,12 @@
 #include <queue>
 #include <list>
 
-#include <octopOS/publisher.h>
 #include "json.hpp" // TODO(llazarek): Replace with real lib
 
 #include "Optional.hpp"
+#include <octopOS/publisher.h>
+#include <octopOS/subscriber.h>
+#include <octopOS/octopos.h>
 
 /** The absolute path of the octopOS config */
 extern const char*  CONFIG_PATH;
