@@ -251,18 +251,13 @@ void babysit_forever(ModuleInfo &modules,
 }
 
 octopOS& launch_octopOS() {
-    std::cout << "start of launch_octopOS" << std::endl;
     octopOS &octopos = octopOS::getInstance();
-    std::cout << "after getting octopOS" << std::endl;
-
-    sleep(2);
 
     if (!launch_octopOS_listeners()) {
 	std::cerr << "Critical Error: Unable to spawn OctopOS listener threads."
 		  << " Exiting..." << std::endl;
 	exit(2);
     }
-    std::cout << "after launching" << std::endl;
 
     return octopos;
 }

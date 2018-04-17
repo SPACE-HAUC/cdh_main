@@ -11,6 +11,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <queue>
+#include <list>
 
 #include <octopOS/publisher.h>
 #include "json.hpp" // TODO(llazarek): Replace with real lib

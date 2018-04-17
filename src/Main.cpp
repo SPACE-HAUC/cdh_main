@@ -19,7 +19,7 @@
 #include "../include/octopOS_driver.hpp"
 
 int main(int argc, char const *argv[]) {
-    octopOS &octopos = launch_ocotopOS();
+    octopOS &octopos = launch_octopOS();
     MemKey current_key = MSGKEY;
 
     Optional<json> maybe_config = load(CONFIG_PATH);
@@ -39,5 +39,7 @@ int main(int argc, char const *argv[]) {
     // when creating our own pub/subs
     current_key = launched.second;
 
-    babysit_forever(modules);
+    publisher<OctoString> downgrade_pub(DOWNGRADE_TOPIC, current_key++);
+    subscriber<OctoString> upgrade_sub(UPGRADE_TOPIC, current_key - 1);
+    babysit_forever(modules, downgrade_pub, upgrade_sub);
 }
