@@ -24,16 +24,16 @@ int main(int argc, char const *argv[]) {
 
     Optional<json> maybe_config = load(CONFIG_PATH);
     if (maybe_config.isEmpty()) {
-	std::cerr << "Critical Error: Unable to read config at "
-		  << CONFIG_PATH
-		  << ". Exiting..." << std::endl;
-	return 1;
+        std::cerr << "Critical Error: Unable to read config at "
+                  << CONFIG_PATH
+                  << ". Exiting..." << std::endl;
+        return 1;
     }
     json config = maybe_config.get();
 
 
     LaunchInfo launched = launch_modules_in(config["modules_enabled"],
-					    current_key);
+                                            current_key);
     ModuleInfo modules = launched.first;
     // Keep track of the memkeys we've given out so that we can give valid ones
     // when creating our own pub/subs

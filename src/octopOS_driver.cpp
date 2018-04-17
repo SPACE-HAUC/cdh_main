@@ -42,8 +42,8 @@ int tentacle_index_to_memkey(int index) {
 
 Optional<json> load(FilePath json_file) {
     if (accessible(json_file)) {
-	std::ifstream in(json_file);
-	return Just(json::parse(in));
+        std::ifstream in(json_file);
+        return Just(json::parse(in));
     }
     return None<json>();
 }
@@ -66,17 +66,17 @@ Optional< std::list<FilePath> > files_in(FilePath directory) {
     if (dir == NULL) {
         return None<std::list<FilePath>>();
     } else {
-	std::list<FilePath> files;
-	while (ent = readdir(dir)){
-	    std::string file = ent->d_name;
-	    // Don't add "." and ".."
-	    if(file != "." && file != "..") {
-		files.push_front(directory + "/" + file);
-	    }
-	}
-	closedir(dir);
+        std::list<FilePath> files;
+        while (ent = readdir(dir)){
+            std::string file = ent->d_name;
+            // Don't add "." and ".."
+            if(file != "." && file != "..") {
+                files.push_front(directory + "/" + file);
+            }
+        }
+        closedir(dir);
 
-	return Just(files);
+        return Just(files);
     }
 }
 
@@ -85,13 +85,13 @@ pid_t launch(FilePath module, MemKey key) {
     pid_t pid;
     switch(pid = fork()) {
     case -1:
-	perror("Fork failed in attempting to launch module.");
-	break;
+        perror("Fork failed in attempting to launch module.");
+        break;
     case 0: // child
         execl(module.c_str(), std::to_string(key).c_str(), (char*)0);
-	exit(0);
+        exit(0);
     default: // parent
-	break;
+        break;
     }
     return pid;
 }
@@ -122,12 +122,12 @@ LaunchInfo launch_modules_in(FilePath dir, MemKey start_key) {
     MemKey current_key = start_key;
     pid_t pid;
     for (FilePath module : modules_in(dir)) {
-	pid_t pid = launch(module, current_key);
-	// Tentacle IDs for children start at 1 because 0 is for octopOS
-	modules[module] = Module(pid, memkey_to_tentacle_index(current_key),
-				 time(0));
-	launch_octopOS_listener_for_child(modules[module].tentacle_id);
-	current_key++;
+        pid_t pid = launch(module, current_key);
+        // Tentacle IDs for children start at 1 because 0 is for octopOS
+        modules[module] = Module(pid, memkey_to_tentacle_index(current_key),
+                                 time(0));
+        launch_octopOS_listener_for_child(modules[module].tentacle_id);
+        current_key++;
     }
     return std::make_pair(modules, current_key);
 }
@@ -137,8 +137,8 @@ bool launch_octopOS_listeners() {
 
     // Wait for data doesn't need an argument
     return launch_octopOS_listener_for_child(OCTOPOS_INTERNAL_TENTACLE_INDEX) &&
-	   !pthread_create(&sub_thread, NULL,
-			   subscriber_manager::wait_for_data, NULL);
+           !pthread_create(&sub_thread, NULL,
+                           subscriber_manager::wait_for_data, NULL);
 }
 
 
@@ -150,8 +150,8 @@ bool launch_octopOS_listeners() {
 std::list<FilePath> modules_in(FilePath dir) {
     auto files = files_in(dir);
     if (files.isEmpty()) {
-	std::cerr << "Error: Unable to read module path from config: " << dir
-		  << std::endl;
+        std::cerr << "Error: Unable to read module path from config: " << dir
+                  << std::endl;
     }
 
     return files.getDefault(std::list<FilePath>());
@@ -169,15 +169,15 @@ int kill_module(std::string path, ModuleInfo *modules) {
 // Modifies MODULE to record premature death if necessary
 bool module_needs_downgrade(Module *module) {
     int died_quickly =
-	(time(0) - (module -> launch_time)) < RUNTIME_CUTOFF_DOWNGRADE_S;
+        (time(0) - (module -> launch_time)) < RUNTIME_CUTOFF_DOWNGRADE_S;
     if (died_quickly) {
-	module -> early_death_count += 1;
+        module -> early_death_count += 1;
     } else {
-	// "Normal" deaths should reset early death counter
-	module -> early_death_count = 0;
+        // "Normal" deaths should reset early death counter
+        module -> early_death_count = 0;
     }
     int died_too_many_times =
-	(module -> early_death_count) > DEATH_COUNT_CUTOFF_DOWNGRADE;
+        (module -> early_death_count) > DEATH_COUNT_CUTOFF_DOWNGRADE;
 
     return died_quickly && died_too_many_times;
 }
@@ -188,51 +188,51 @@ void downgrade(FilePath module_name, publisher<OctoString> &downgrade_pub) {
 
 // Modifies MODULES[PATH]
 void reboot_module(std::string path, ModuleInfo *modules,
-		   publisher<OctoString> &downgrade_pub) {
+                   publisher<OctoString> &downgrade_pub) {
     Module &module = (*modules)[path];
     if (module.killed || !module_needs_downgrade(&module)) {
-	// Death was intentional or unsuspicious
-	relaunch(module, path);
+        // Death was intentional or unsuspicious
+        relaunch(module, path);
     } else {
-	// Death warrants downgrade
-	module.downgrade_requested = true;
-	// Reset death count to give downgraded module a chance
-	module.early_death_count = 0;
-	downgrade(path, downgrade_pub);
+        // Death warrants downgrade
+        module.downgrade_requested = true;
+        // Reset death count to give downgraded module a chance
+        module.early_death_count = 0;
+        downgrade(path, downgrade_pub);
     }
 }
 
 Optional<std::string> find_module_with(pid_t pid, const ModuleInfo &modules) {
     auto moduleIt = std::find_if(modules.begin(), modules.end(),
-				 [&](const std::pair<std::string, Module> el) {
-				     return el.second.pid == pid;
-				 });
+                                 [&](const std::pair<std::string, Module> el) {
+                                     return el.second.pid == pid;
+                                 });
     if (moduleIt == modules.end()) {
-	return None<std::string>();
+        return None<std::string>();
     } else {
-	return Just(moduleIt -> first);
+        return Just(moduleIt -> first);
     }
 }
 
 // Watch over children, rebooting and upgrading modules
 void babysit_forever(ModuleInfo &modules,
-		     publisher<OctoString> &downgrade_pub,
-		     subscriber<OctoString> &upgrade_sub) {
+                     publisher<OctoString> &downgrade_pub,
+                     subscriber<OctoString> &upgrade_sub) {
     while (1) {
-	// reboot any dead modules
-	reboot_dead_modules(&modules, &downgrade_pub);
+        // reboot any dead modules
+        reboot_dead_modules(&modules, &downgrade_pub);
 
-	// check for upgrade data
-	if(upgrade_sub.data_available()) {
-	    std::string module_path = upgrade_sub.get_data();
-	    Module &module = modules[module_path];
-	    if (module.downgrade_requested) {
-		relaunch(module, module_path);
-	    } else {
-		kill_module(module_path, &modules);
-	    }
-	}
-	usleep(10000);
+        // check for upgrade data
+        if(upgrade_sub.data_available()) {
+            std::string module_path = upgrade_sub.get_data();
+            Module &module = modules[module_path];
+            if (module.downgrade_requested) {
+                relaunch(module, module_path);
+            } else {
+                kill_module(module_path, &modules);
+            }
+        }
+        usleep(10000);
     }
 }
 
@@ -240,26 +240,26 @@ octopOS& launch_octopOS() {
     octopOS &octopos = octopOS::getInstance();
 
     if (!launch_octopOS_listeners()) {
-	std::cerr << "Critical Error: Unable to spawn OctopOS listener threads."
-		  << " Exiting..." << std::endl;
-	exit(2);
+        std::cerr << "Critical Error: Unable to spawn OctopOS listener threads."
+                  << " Exiting..." << std::endl;
+        exit(2);
     }
 
     return octopos;
 }
 
 void reboot_dead_modules(ModuleInfo *modules,
-			 publisher<OctoString> *downgrade_pub) {
+                         publisher<OctoString> *downgrade_pub) {
     pid_t pid;
     while((pid = waitpid(-1, NULL, WNOHANG)) > 0) {
-	Optional<std::string> found = find_module_with(pid, *modules);
-	if (found.isEmpty()) {
-	    std::cerr << "Notification of unregistered module death "
-		      << "with pid " << pid << ". "
-		      << "Something has probably gone horribly wrong."
-		      << std::endl;
-	} else {
-	    reboot_module(found.get(), modules, *downgrade_pub);
-	}
+        Optional<std::string> found = find_module_with(pid, *modules);
+        if (found.isEmpty()) {
+            std::cerr << "Notification of unregistered module death "
+                      << "with pid " << pid << ". "
+                      << "Something has probably gone horribly wrong."
+                      << std::endl;
+        } else {
+            reboot_module(found.get(), modules, *downgrade_pub);
+        }
     }
 }

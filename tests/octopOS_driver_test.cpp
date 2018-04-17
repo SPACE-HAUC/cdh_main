@@ -74,9 +74,9 @@ BOOST_AUTO_TEST_CASE(module_needs_downgrade_test) {
 
 BOOST_AUTO_TEST_CASE(find_module_with_test) {
     ModuleInfo modules = {
-	{"a", Module(111, 1, 1)},
-	{"b", Module(222, 2, 1)},
-	{"c", Module(333, 3, 1)}
+        {"a", Module(111, 1, 1)},
+        {"b", Module(222, 2, 1)},
+        {"c", Module(333, 3, 1)}
     };
     auto empty = find_module_with(5, modules);
     BOOST_REQUIRE(empty.isEmpty());
@@ -132,11 +132,11 @@ BOOST_AUTO_TEST_CASE(launch_modules_in_test) {
     BOOST_REQUIRE(module_files.size() == modules.size());
     sleep(1);
     for(std::pair<std::string, Module> m: modules) {
-	auto file = std::find(module_files.begin(),
-			      module_files.end(),
-			      m.first);
-	BOOST_REQUIRE(file != module_files.end());
-	BOOST_REQUIRE(m.second.pid > 1);
-	BOOST_REQUIRE(kill(m.second.pid, SIGTERM) == 0);
+        auto file = std::find(module_files.begin(),
+                              module_files.end(),
+                              m.first);
+        BOOST_REQUIRE(file != module_files.end());
+        BOOST_REQUIRE(m.second.pid > 1);
+        BOOST_REQUIRE(kill(m.second.pid, SIGTERM) == 0);
     }
 }

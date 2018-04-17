@@ -30,7 +30,7 @@ BOOST_AUTO_TEST_CASE(babysit_forever_test) {
 
     pthread_t subscriber_manager_thread;
     BOOST_REQUIRE(pthread_create(&subscriber_manager_thread, NULL,
-				 subscriber_manager::wait_for_data, NULL) == 0);
+                                 subscriber_manager::wait_for_data, NULL) == 0);
     BOOST_REQUIRE(launch_octopOS_listener_for_child(0));
     publisher<OctoString> downgrade_pub(DOWNGRADE_TOPIC, current_key++);
     subscriber<OctoString> downgrade_sub(DOWNGRADE_TOPIC, current_key - 1);
@@ -48,7 +48,7 @@ BOOST_AUTO_TEST_CASE(babysit_forever_test) {
     bsi.upgrade_sub = &upgrade_sub;
     pthread_t babysit_thread;
     BOOST_REQUIRE(!pthread_create(&babysit_thread, NULL,
-				  run_babysit_forever, (void*)(&bsi)));
+                                  run_babysit_forever, (void*)(&bsi)));
 
     // first reboot on a module that shouldn't be downgraded because
     // it hasn't died enough times

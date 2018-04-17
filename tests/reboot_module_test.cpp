@@ -18,7 +18,7 @@ BOOST_AUTO_TEST_CASE(reboot_module_test) {
 
     pthread_t subscriber_manager_thread;
     BOOST_REQUIRE(pthread_create(&subscriber_manager_thread, NULL,
-				 subscriber_manager::wait_for_data, NULL) == 0);
+                                 subscriber_manager::wait_for_data, NULL) == 0);
     BOOST_REQUIRE(launch_octopOS_listener_for_child(0));
     publisher<OctoString> downgrade_pub(DOWNGRADE_TOPIC, current_key++);
     subscriber<OctoString> downgrade_sub(DOWNGRADE_TOPIC, current_key - 1);
