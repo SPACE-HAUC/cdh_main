@@ -99,7 +99,8 @@ public:
 	    rebootQ.pop();
 	    Optional<std::string> found = find_module_with(pid, *modules);
 	    if (found.isEmpty()) {
-		std::cerr << "Notification of unregistered module death. "
+		std::cerr << "Notification of unregistered module death "
+			  << "with pid " << pid << ". "
 			  << "Something has probably gone horribly wrong."
 			  << std::endl;
 	    } else {
