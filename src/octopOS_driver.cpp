@@ -224,15 +224,14 @@ Optional<std::string> find_module_with(pid_t pid, const ModuleInfo &modules) {
 }
 
 // Watch over children, rebooting and upgrading modules
-void babysit_forever(ModuleInfo &modules) {
-    auto upgrade_module = modules[UPGRADE_TOPIC];
-    publisher<OctoString> downgrade_pub(DOWNGRADE_TOPIC,
-					upgrade_module.tentacle_id);
+void babysit_forever(ModuleInfo &modules,
+		     publisher<OctoString> &downgrade_pub,
+		     subscriber<OctoString> &upgrade_sub) {
+    std::cout << "> Starting to babysit..." << std::endl;
+    std::cout << "> About to register handler..." << std::endl;
     ChildHandler::register_child_handler(&modules, &downgrade_pub);
 
-    subscriber<OctoString> upgrade_sub(UPGRADE_TOPIC,
-				       upgrade_module.tentacle_id);
-
+    std::cout << "> Entering loop..." << std::endl;
     while (1) {
 	// reboot any dead modules
 	ChildHandler::reboot_dead_modules();
@@ -247,6 +246,7 @@ void babysit_forever(ModuleInfo &modules) {
 		kill_module(module_path, &modules);
 	    }
 	}
+	usleep(10000);
     }
 }
 

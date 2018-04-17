@@ -248,8 +248,16 @@
 //     std::cout << "Done" << std::endl;
 // }
 
+struct babysitInfo {
+    ModuleInfo* modules;
+    publisher<OctoString> *downgrade_pub;
+    subscriber<OctoString> *upgrade_sub;
+};
+
 void* run_babysit_forever(void *modules) {
-    babysit_forever(*(ModuleInfo*)modules);
+    std::cout << "> About to run babysit!" << std::endl;
+    struct babysitInfo bsi = *(struct babysitInfo*)modules;
+    babysit_forever(*bsi.modules, *bsi.downgrade_pub, *bsi.upgrade_sub);
     return NULL;
 }
 
@@ -268,19 +276,25 @@ BOOST_AUTO_TEST_CASE(babysit_forever_test) {
     printf("\n\nAfter\n\n");
     subscriber<OctoString> downgrade_sub(DOWNGRADE_TOPIC, current_key - 1);
     // ----------
+    subscriber<OctoString> upgrade_sub(UPGRADE_TOPIC, current_key - 1);
+
 
     const FilePath path = "./modules";
     LaunchInfo info = launch_modules_in(path, current_key);
     ModuleInfo modules = info.first;
 
+    struct babysitInfo bsi;
+    bsi.modules = &modules;
+    bsi.downgrade_pub = &downgrade_pub;
+    bsi.upgrade_sub = &upgrade_sub;
     pthread_t babysit_thread;
     BOOST_REQUIRE(!pthread_create(&babysit_thread, NULL,
-				  run_babysit_forever, (void*)(&modules)));
+				  run_babysit_forever, (void*)(&bsi)));
 
     // first reboot on a module that shouldn't be downgraded because
     // it hasn't died enough times
     const FilePath module1 = path + "/test_module";
-    Module m1 = modules[module1];
+    Module &m1 = modules[module1];
     pid_t oldpid = m1.pid;
     sleep(1);
     sleep(1);
@@ -294,6 +308,7 @@ BOOST_AUTO_TEST_CASE(babysit_forever_test) {
     sleep(1);
     sleep(1);
     std::cout << "reboot: " << ChildHandler::reboot_count << std::endl;
+    // m1 = modules[module1];
     BOOST_REQUIRE(m1.pid != oldpid);
     BOOST_REQUIRE(m1.pid > 1);
     BOOST_REQUIRE(!m1.killed);
@@ -302,6 +317,7 @@ BOOST_AUTO_TEST_CASE(babysit_forever_test) {
     BOOST_REQUIRE(m1.early_death_count == 1);
     std::cout << "Past first" << std::endl;
 
+    // next module death is too many times so shouldn't be rebooted
     sleep(1);
     sleep(1);
     sleep(1);
@@ -311,7 +327,6 @@ BOOST_AUTO_TEST_CASE(babysit_forever_test) {
     std::cout << "Killing pid = " << m1.pid << std::endl;
     BOOST_REQUIRE(kill(m1.pid, SIGTERM) != -1);
     std::cout << "Done killing pid" << std::endl;
-    
     sleep(1);
     sleep(1);
     sleep(1);
@@ -331,7 +346,7 @@ BOOST_AUTO_TEST_CASE(babysit_forever_test) {
     // was killed intentionally
     std::cout << "mid second 2" << std::endl;
     const FilePath module2 = path + "/test_module2";
-    Module m2 = modules[module2];
+    Module &m2 = modules[module2];
     oldpid = m2.pid;
     BOOST_REQUIRE(kill_module(module2, &modules) != -1);
     BOOST_REQUIRE(m2.killed);
@@ -345,6 +360,9 @@ BOOST_AUTO_TEST_CASE(babysit_forever_test) {
     BOOST_REQUIRE(!m2.downgrade_requested);
     BOOST_REQUIRE(!downgrade_sub.data_available());
     BOOST_REQUIRE(m2.early_death_count == 0);
+
+    // All done, kill module2
+    kill(m2.pid, SIGTERM);
 }
 
 // BOOST_AUTO_TEST_SUITE_END()
