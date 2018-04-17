@@ -33,11 +33,6 @@ const int    DEATH_COUNT_CUTOFF_DOWNGRADE = 5;
 const bool   LISTEN_FOR_MODULE_UPGRADES = true;
 const int    OCTOPOS_INTERNAL_TENTACLE_INDEX = 0;
 
-std::queue<pid_t> ChildHandler::rebootQ;
-ModuleInfo *ChildHandler::modules;
-publisher<OctoString> *ChildHandler::downgrade_pub;
-
-
 int memkey_to_tentacle_index(MemKey key) {
     return key - MSGKEY + 1;
 }
@@ -223,14 +218,9 @@ Optional<std::string> find_module_with(pid_t pid, const ModuleInfo &modules) {
 void babysit_forever(ModuleInfo &modules,
 		     publisher<OctoString> &downgrade_pub,
 		     subscriber<OctoString> &upgrade_sub) {
-    std::cout << "> Starting to babysit..." << std::endl;
-    std::cout << "> About to register handler..." << std::endl;
-    ChildHandler::register_child_handler(&modules, &downgrade_pub);
-
-    std::cout << "> Entering loop..." << std::endl;
     while (1) {
 	// reboot any dead modules
-	ChildHandler::reboot_dead_modules();
+	reboot_dead_modules(&modules, &downgrade_pub);
 
 	// check for upgrade data
 	if(upgrade_sub.data_available()) {
@@ -256,4 +246,20 @@ octopOS& launch_octopOS() {
     }
 
     return octopos;
+}
+
+void reboot_dead_modules(ModuleInfo *modules,
+			 publisher<OctoString> *downgrade_pub) {
+    pid_t pid;
+    while((pid = waitpid(-1, NULL, WNOHANG)) > 0) {
+	Optional<std::string> found = find_module_with(pid, *modules);
+	if (found.isEmpty()) {
+	    std::cerr << "Notification of unregistered module death "
+		      << "with pid " << pid << ". "
+		      << "Something has probably gone horribly wrong."
+		      << std::endl;
+	} else {
+	    reboot_module(found.get(), modules, *downgrade_pub);
+	}
+    }
 }

@@ -40,13 +40,11 @@ BOOST_AUTO_TEST_CASE(load_test) {
 }
 
 BOOST_AUTO_TEST_CASE(launch_test) {
-    std::cout << "Beginning of launch_test" << std::endl;
     BOOST_REQUIRE_NO_THROW(octopOS::getInstance());
     pid_t pid = launch("./modules/test_module", 0);
     BOOST_REQUIRE(pid > 1);
     sleep(1);
     BOOST_REQUIRE(kill(pid, SIGTERM) == 0);
-    std::cout << "End of launch_test" << std::endl;
 }
 
 BOOST_AUTO_TEST_CASE(launch_octopOS_listeners_test) {
@@ -125,7 +123,6 @@ BOOST_AUTO_TEST_CASE(kill_module_test) {
 
 BOOST_AUTO_TEST_CASE(launch_modules_in_test) {
     BOOST_REQUIRE_NO_THROW(octopOS::getInstance());
-    printf("\n\nStarting launch_in\n\n");
     const FilePath path = "./modules";
     auto olist = files_in(path);
     BOOST_REQUIRE(!olist.isEmpty());
@@ -140,8 +137,6 @@ BOOST_AUTO_TEST_CASE(launch_modules_in_test) {
 			      m.first);
 	BOOST_REQUIRE(file != module_files.end());
 	BOOST_REQUIRE(m.second.pid > 1);
-	std::cout << "Killing module with pid " << m.second.pid << std::endl;
 	BOOST_REQUIRE(kill(m.second.pid, SIGTERM) == 0);
     }
-    printf("\n\nFinished launch_in\n\n");
 }

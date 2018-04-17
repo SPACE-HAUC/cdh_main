@@ -60,38 +60,7 @@ void babysit_forever(ModuleInfo &modules,
 		     publisher<OctoString> &downgrade_pub,
 		     subscriber<OctoString> &upgrade_sub);
 octopOS& launch_octopOS();
-
-
-class ChildHandler {
-public:
-    static bool register_child_handler(ModuleInfo *_modules,
-                                       publisher<OctoString> *_downgrade_pub) {
-        modules = _modules;
-        downgrade_pub = _downgrade_pub;
-        return true;
-    }
-
-    static void reboot_dead_modules() {
-	pid_t pid;
-        while((pid = waitpid(-1, NULL, WNOHANG)) > 0) {
-	    std::cout << ">>> Got a dead child with pid " << pid << std::endl;
-            Optional<std::string> found = find_module_with(pid, *modules);
-            if (found.isEmpty()) {
-                std::cerr << "Notification of unregistered module death "
-                          << "with pid " << pid << ". "
-                          << "Something has probably gone horribly wrong."
-                          << std::endl;
-            } else {
-		std::cout << ">>> rebooting it" << std::endl;
-                reboot_module(found.get(), modules, *downgrade_pub);
-            }
-        }
-    }
-
-private:
-    static ModuleInfo *modules;
-    static publisher<OctoString> *downgrade_pub;
-    static std::queue<pid_t> rebootQ;
-};
+void reboot_dead_modules(ModuleInfo *modules,
+			 publisher<OctoString> *downgrade_pub);
 
 #endif /* _OCTOPOS_DRIVER_H_ */
