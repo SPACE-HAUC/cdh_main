@@ -64,42 +64,17 @@ octopOS& launch_octopOS();
 
 class ChildHandler {
 public:
-    static void sigchld_handler(int sig)
-    {
-        // pid_t pid;
-        // int status;
-        // pthread_t tmp;
-
-        // std::cout << "A child (" << sig << ")died!" << std::endl;
-
-        // while ((pid = waitpid(-1, &status, WNOHANG)) != -1) {
-        //     // handle all dead children later
-        //     rebootQ.push(pid);
-        // }
-    }
-
     static bool register_child_handler(ModuleInfo *_modules,
                                        publisher<OctoString> *_downgrade_pub) {
         modules = _modules;
         downgrade_pub = _downgrade_pub;
-        struct sigaction sa;
-
-        sa.sa_handler = sigchld_handler;
-        sigemptyset(&sa.sa_mask);
-        sa.sa_flags = SA_RESTART | SA_NOCLDSTOP;
-
-        bool success = sigaction(SIGCHLD, &sa, NULL) != -1;
-        if(!success) {
-            printf("Failed to set child handler\n"); // tmp
-        }
-        return success;
+        return true;
     }
 
     static void reboot_dead_modules() {
 	pid_t pid;
         while((pid = waitpid(-1, NULL, WNOHANG)) > 0) {
 	    std::cout << ">>> Got a dead child with pid " << pid << std::endl;
-            reboot_count++; // tmp
             Optional<std::string> found = find_module_with(pid, *modules);
             if (found.isEmpty()) {
                 std::cerr << "Notification of unregistered module death "
@@ -112,7 +87,6 @@ public:
             }
         }
     }
-    static int reboot_count; // tmp
 
 private:
     static ModuleInfo *modules;

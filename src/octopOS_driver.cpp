@@ -25,16 +25,14 @@
 #include "../include/Optional.hpp"
 #include "../include/octopOS_driver.hpp"
 
-
 const char*  CONFIG_PATH = "/etc/octopOS/config.json";
 const char*  UPGRADE_TOPIC = "module_upgrade";
 const char*  DOWNGRADE_TOPIC = "module_downgrade";
-const time_t RUNTIME_CUTOFF_DOWNGRADE_S = 600; // tmp switch back to reasonable
+const time_t RUNTIME_CUTOFF_DOWNGRADE_S = 5*60;
 const int    DEATH_COUNT_CUTOFF_DOWNGRADE = 5;
 const bool   LISTEN_FOR_MODULE_UPGRADES = true;
 const int    OCTOPOS_INTERNAL_TENTACLE_INDEX = 0;
 
-int ChildHandler::reboot_count = 0; // tmp
 std::queue<pid_t> ChildHandler::rebootQ;
 ModuleInfo *ChildHandler::modules;
 publisher<OctoString> *ChildHandler::downgrade_pub;
@@ -190,8 +188,6 @@ bool module_needs_downgrade(Module *module) {
 }
 
 void downgrade(FilePath module_name, publisher<OctoString> &downgrade_pub) {
-    std::cout << "Publishing module [" << module_name << "] to downgrade pub!"
-	      << std::endl; // tmp
     downgrade_pub.publish(module_name);
 }
 
