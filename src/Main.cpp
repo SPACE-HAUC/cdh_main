@@ -41,5 +41,5 @@ int main(int argc, char const *argv[]) {
 
     publisher<OctoString> downgrade_pub(DOWNGRADE_TOPIC, current_key++);
     subscriber<OctoString> upgrade_sub(UPGRADE_TOPIC, current_key - 1);
-    babysit_forever(modules, downgrade_pub, upgrade_sub);
+    babysit_forever(&modules, &downgrade_pub, &upgrade_sub);
 }
