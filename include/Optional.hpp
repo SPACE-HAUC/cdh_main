@@ -54,8 +54,6 @@ public:
         return empty ? default_value : x;
     }
 
-    // throws: std::runtime_error
-
     /**
      * @brief Get this Option's value. *Note that this method throws
      * std::runtime_error if this is a None.*
