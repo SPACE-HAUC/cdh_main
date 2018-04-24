@@ -14,3 +14,4 @@ script:
   - cmake .. && make
   - cd .. && git clone "https://github.com/SpaceHAUC-Command-and-Data-Handling/Powerlint.git" && export PATH=$PATH:. && mv ./Powerlint/* ./
   - wget "https://raw.githubusercontent.com/SpaceHAUC-Command-and-Data-Handling/git_hooks/master/hooks/check-style" && chmod +x ./check-style && ./check-style
+  - git clone "https://github.com/UML-SpaceHAUC/OctopOS.git" && cd OctopOS && mkdir build && cd build && cmake .. && make && sudo make install
