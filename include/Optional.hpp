@@ -75,17 +75,44 @@ public:
      * is present, to obtain a new optional value.
      *
      * @param f The function to apply.
-     * @return The new optional value.
+     * @return The new value.
      */
     template <typename B>
-    Optional<B> map(Optional<B> (*f)(T)) {
+    Optional<B> map(B (*f)(T)) {
+        if(empty) {
+            return Optional<B>::None();
+        } else {
+            return Optional<B>::Just(f(x));
+        }
+    }
+
+    /**
+     * @brief Apply the given function to this Option's value, if it
+     * is present, to obtain a new optional value by flattening the
+     * return of the function into a single optional value.
+     *
+     * @param f The function to apply.
+     * @return The new value.
+     */
+    template <typename B>
+    Optional<B> flatMap(Optional<B> (*f)(T)) {
         if(empty) {
             return Optional<B>::None();
         } else {
             return f(x);
         }
     }
+
 private:
+    /**
+     * @brief Default constructor for optional values. Constructs an
+     * empty value. This should not be used directly. Use `Just` and
+     * `None` instead.
+     *
+     * @param is_none Is the value `None`?
+     * @return A new optional value.
+     */
+    Optional() : empty(true) {}
 
     /**
      * @brief Direct constructor for optional values. This should not
