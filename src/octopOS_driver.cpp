@@ -10,6 +10,9 @@
  * initialization, management, and error handling.
  */
 
+#include <octopOS/octopos.h>
+#include <octopOS/subscriber.h>
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -20,9 +23,6 @@
 #include <fstream>
 #include <utility>
 #include <string>
-
-#include <octopOS/octopos.h>
-#include <octopOS/subscriber.h>
 
 #include "../include/Optional.hpp"
 #include "../include/octopOS_driver.hpp"
