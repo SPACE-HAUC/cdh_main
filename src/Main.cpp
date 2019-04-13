@@ -11,9 +11,9 @@
 #include <sys/wait.h>
 #include <pthread.h>
 
-#include <octopOS/octopos.h>
-#include <octopOS/subscriber.h>
-#include <octopOS/publisher.h>
+#include <OctopOS/octopos.h>
+#include <OctopOS/subscriber.h>
+#include <OctopOS/publisher.h>
 
 #include "Optional.hpp"
 #include "octopOS_driver.hpp"
@@ -22,7 +22,7 @@ int main(int argc, char const *argv[]) {
     octopOS &octopos = launch_octopOS();
     MemKey current_key = MSGKEY;
 
-    Optional<json> maybe_config = load(CONFIG_PATH);
+    CDH::Optional<json> maybe_config = load(CONFIG_PATH);
     if (maybe_config.isEmpty()) {
         std::cerr << "Critical Error: Unable to read config at "
                   << CONFIG_PATH

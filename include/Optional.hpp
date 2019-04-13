@@ -11,6 +11,7 @@
  * Data that is present is called `Just` a value, or a 'present' value.
  * Data that is not present is called `None`, or an 'empty' value.
  */
+namespace CDH {
 template <typename T>
 class Optional {
 public:
@@ -126,6 +127,7 @@ private:
     /** The value being stored. */
     T x;
 };
+}
 
 /**
  * @brief Construct a new present optional value.
@@ -134,8 +136,8 @@ private:
  * @return A new optional value.
  */
 template <typename T>
-Optional<T> Just(T value) {
-    return Optional<T>::Just(value);
+CDH::Optional<T> Just(T value) {
+    return CDH::Optional<T>::Just(value);
 }
 
 /**
@@ -144,8 +146,8 @@ Optional<T> Just(T value) {
  * @return A new optional value.
  */
 template <typename T>
-Optional<T> None() {
-    return Optional<T>::None();
+CDH::Optional<T> None() {
+    return CDH::Optional<T>::None();
 }
 
 
@@ -158,13 +160,12 @@ Optional<T> None() {
  * @return The output stream.
  */
 template <typename T>
-std::ostream& operator<<(std::ostream& os, const Optional<T> &o) {
+std::ostream& operator<<(std::ostream& os, const CDH::Optional<T> &o) {
     if(o.isEmpty()) {
         return os << "Empty()";
     } else {
         return os << "Just(" << o.get() << ")";
     }
 }
-
 
 #endif /* _OPTIONAL_H_ */
