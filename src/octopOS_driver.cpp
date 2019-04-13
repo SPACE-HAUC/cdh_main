@@ -10,8 +10,8 @@
  * initialization, management, and error handling.
  */
 
-#include <octopOS/octopos.h>
-#include <octopOS/subscriber.h>
+#include <OctopOS/octopos.h>
+#include <OctopOS/subscriber.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -42,7 +42,7 @@ int tentacle_index_to_memkey(int index) {
     return index + MSGKEY - 1;
 }
 
-Optional<json> load(FilePath json_file) {
+CDH::Optional<json> load(FilePath json_file) {
     if (accessible(json_file)) {
         std::ifstream in(json_file);
         return Just(json::parse(in));
@@ -60,7 +60,7 @@ bool accessible(FilePath file) {
 
 // Returns a list of *complete* (relative or absolute) paths to the
 // files in DIRECTORY if directory is accessible.
-Optional< std::list<FilePath> > files_in(FilePath directory) {
+CDH::Optional< std::list<FilePath> > files_in(FilePath directory) {
     DIR *dir;
     struct dirent *ent;
 
@@ -69,7 +69,7 @@ Optional< std::list<FilePath> > files_in(FilePath directory) {
         return None<std::list<FilePath>>();
     } else {
         std::list<FilePath> files;
-        while (ent = readdir(dir)) {
+        while ((ent = readdir(dir))) {
             std::string file = ent->d_name;
             // Don't add "." and ".."
             if (file != "." && file != "..") {
@@ -85,7 +85,8 @@ Optional< std::list<FilePath> > files_in(FilePath directory) {
 // launches the given module in a new child process
 pid_t launch(FilePath module, MemKey key) {
     pid_t pid;
-    switch (pid = fork()) {
+    pid = fork();
+    switch (pid) {
     case -1:
         perror("Fork failed in attempting to launch module.");
         break;
@@ -185,7 +186,7 @@ bool module_needs_downgrade(Module *module) {
 }
 
 void downgrade(FilePath module_name, publisher<OctoString> *downgrade_pub) {
-    downgrade_pub->publish(module_name);
+    downgrade_pub->publish(OctoString(module_name));
 }
 
 // Modifies MODULES[PATH]
@@ -204,7 +205,7 @@ void reboot_module(std::string path, ModuleInfo *modules,
     }
 }
 
-Optional<std::string> find_module_with(pid_t pid, const ModuleInfo &modules) {
+CDH::Optional<std::string> find_module_with(pid_t pid, const ModuleInfo &modules) {
     auto moduleIt =
         std::find_if(modules.begin(), modules.end(),
                      [&pid](const std::pair<std::string, Module> el) {
@@ -255,7 +256,7 @@ void reboot_dead_modules(ModuleInfo *modules,
                          publisher<OctoString> *downgrade_pub) {
     pid_t pid;
     while ((pid = waitpid(-1, NULL, WNOHANG)) > 0) {
-        Optional<std::string> found = find_module_with(pid, *modules);
+        CDH::Optional<std::string> found = find_module_with(pid, *modules);
         if (found.isEmpty()) {
             std::cerr << "Notification of unregistered module death "
                       << "with pid " << pid << ". "

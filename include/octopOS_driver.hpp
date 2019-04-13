@@ -16,9 +16,9 @@
 #include "json.hpp" // TODO(llazarek): Replace with real lib
 
 #include "Optional.hpp"
-#include <octopOS/publisher.h>
-#include <octopOS/subscriber.h>
-#include <octopOS/octopos.h>
+#include <OctopOS/publisher.h>
+#include <OctopOS/subscriber.h>
+#include <OctopOS/octopos.h>
 
 /** The absolute path of the octopOS config */
 extern const char*  CONFIG_PATH;
@@ -50,14 +50,14 @@ struct Module {
     pid_t pid;
     /** The ID of the tentacle assigned to the module. */
     int tentacle_id;
-    /** Whether the module has been intentionally killed */
-    bool killed;
-    /** Whether the module has been requested to be downgraded */
-    bool downgrade_requested;
     /** The time that the module was launched. This is used to
      *  calculate running time when the module dies.
      */
     time_t launch_time;
+    /** Whether the module has been intentionally killed */
+    bool killed;
+    /** Whether the module has been requested to be downgraded */
+    bool downgrade_requested;
     /** The number of early/"suspicious" _sequential_ deaths of the module. */
     int early_death_count;
     /**
@@ -94,7 +94,7 @@ bool accessible(FilePath file);
  * @param json_file The path to the file to load.
  * @return The parsed file, if found.
  */
-Optional<json> load(FilePath json_file);
+CDH::Optional<json> load(FilePath json_file);
 
 /**
  * Launch the given MODULE with memory key KEY.
@@ -140,7 +140,7 @@ std::list<FilePath> modules_in(FilePath dir);
  * @param dir An absolute path to a directory.
  * @return A list of files in the directory, if it exists.
  */
-Optional< std::list<FilePath> > files_in(FilePath dir);
+CDH::Optional< std::list<FilePath> > files_in(FilePath dir);
 
 
 /**
@@ -168,7 +168,7 @@ bool launch_octopOS_listener_for_child(int tentacle_index);
  * @param modules The set of modules to search.
  * @return The `Module` with the given pid, if found.
  */
-Optional<std::string> find_module_with(pid_t pid, const ModuleInfo &modules);
+CDH::Optional<std::string> find_module_with(pid_t pid, const ModuleInfo &modules);
 
 /**
  * @brief Reboot the module with the given executable path.
