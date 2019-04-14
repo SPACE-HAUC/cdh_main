@@ -31,8 +31,7 @@ int main(int argc, char const *argv[]) {
     }
     json config = maybe_config.get();
 
-
-    LaunchInfo launched = launch_modules_in(config["modules_enabled"],
+    LaunchInfo launched = launch_modules_in("/modules",
                                             current_key);
     ModuleInfo modules = launched.first;
     // Keep track of the memkeys we've given out so that we can give valid ones

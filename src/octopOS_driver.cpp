@@ -91,7 +91,7 @@ pid_t launch(FilePath module, MemKey key) {
         perror("Fork failed in attempting to launch module.");
         break;
     case 0:  // child
-        execl(module.c_str(), std::to_string(key).c_str(), (char*)0);  // NOLINT
+        execl("/home/pi/wrapper/bin/wrapper" , module.c_str(), std::to_string(key).c_str(), (char*)0);  // NOLINT
         exit(0);
     default:  // parent
         break;
